@@ -1,0 +1,184 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">ADMINISTRATION</p>
+      <h1>Users &amp; access</h1>
+      <p class="muted">Control who can sign in and what they can do in your company.</p>
+    </div>
+    <button mat-flat-button [disabled]="loading() || !roles().length" (click)="action('invite')">
+      <span class="button-content"><app-icon name="plus" />Invite user</span>
+    </button>
+  </div>
+  <nav class="access-tabs" aria-label="Access management">
+    <a mat-flat-button routerLink="/administration/users" aria-current="page">Users</a
+    ><a mat-button routerLink="/administration/roles">Roles &amp; permissions</a>
+  </nav>
+  @if (error()) {
+    <p role="alert" class="message error">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p role="status" class="message">{{ success() }}</p>
+  }
+  @if (invitation()) {
+    <section class="panel invitation-panel">
+      <h2>Activation link ready</h2>
+      <p class="muted">
+        Share this link securely. It expires {{ expires() | date: 'medium' }}. No email has been
+        sent.
+      </p>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Activation link</mat-label
+        ><input
+          matInput
+          readonly
+          [value]="invitation()"
+          (focus)="$any($event.target).select()" /></mat-form-field
+      ><button mat-button (click)="invitation.set('')">Hide link</button>
+    </section>
+  }
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>
+          Company users <span class="count">{{ total }}</span>
+        </h2>
+        <p class="muted">Login accounts and employee profiles are managed separately.</p>
+      </div>
+    </div>
+    <form class="access-filters" [formGroup]="filters" (ngSubmit)="apply()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Search users</mat-label
+        ><input matInput formControlName="search" placeholder="Name or email" maxlength="120"
+      /></mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Status</mat-label
+        ><mat-select formControlName="status"
+          ><mat-option value="">All statuses</mat-option
+          ><mat-option value="active">Active</mat-option
+          ><mat-option value="invited">Invited</mat-option
+          ><mat-option value="disabled">Disabled</mat-option></mat-select
+        ></mat-form-field
+      >
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Role</mat-label
+        ><mat-select formControlName="role_id"
+          ><mat-option value="">All roles</mat-option>
+          @for (role of roles(); track role.id) {
+            <mat-option [value]="role.id">{{ role.name }}</mat-option>
+          }
+        </mat-select></mat-form-field
+      >
+      <div class="filter-actions">
+        <button mat-flat-button type="submit" [disabled]="loading()">Apply filters</button
+        ><button mat-button type="button" [disabled]="loading()" (click)="reset()">Reset</button>
+      </div>
+    </form>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading users" />
+    }
+    @if (rows().length) {
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Company users">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Roles</th>
+              <th scope="col">Employee</th>
+              <th scope="col">Status / last sign-in</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of rows(); track user.id) {
+              <tr>
+                <td>
+                  <span class="record-name"
+                    >{{ user.display_name }}
+                    @if (user.id === session.user()?.id) {
+                      <span class="count">You</span>
+                    }</span
+                  ><span class="record-code">{{ user.email }}</span>
+                </td>
+                <td>
+                  <div class="role-tags">
+                    @for (role of user.roles; track role.id) {
+                      <span>{{ role.name }}</span>
+                    } @empty {
+                      <span>No roles</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  @if (
+                    user.employee_id && session.user()?.permissions?.includes('employees.manage')
+                  ) {
+                    <a [routerLink]="['/employees', user.employee_id]">{{ user.employee_code }}</a>
+                  } @else {
+                    {{ user.employee_code || 'Not linked' }}
+                  }
+                </td>
+                <td>
+                  <span
+                    class="status"
+                    [class.inactive]="user.status === 'disabled'"
+                    [class.trial]="user.status === 'invited'"
+                    >{{ user.status }}</span
+                  >
+                  <div class="record-code last-login">
+                    {{
+                      user.last_login_at
+                        ? (user.last_login_at | date: 'mediumDate')
+                        : 'Never signed in'
+                    }}
+                  </div>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    @if (manageable(user)) {
+                      <button mat-button [disabled]="loading()" (click)="action('roles', user)">
+                        Change roles</button
+                      ><button mat-button [disabled]="loading()" (click)="action('status', user)">
+                        {{ user.status === 'disabled' ? 'Enable' : 'Disable' }}
+                      </button>
+                      @if (user.status === 'invited') {
+                        <button
+                          mat-button
+                          [disabled]="loading()"
+                          (click)="action('reinvite', user)"
+                        >
+                          Reissue invite
+                        </button>
+                      }
+                    } @else {
+                      <span class="muted">{{
+                        user.id === session.user()?.id
+                          ? 'Managed by another admin'
+                          : 'Higher access required'
+                      }}</span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!loading()) {
+      <div class="empty-state">
+        <app-icon name="team" />
+        <h2>{{ error() ? 'Users unavailable' : 'No users found' }}</h2>
+        <p>Adjust the filters or invite a new company user.</p>
+      </div>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="[20, 50, 100]"
+      [disabled]="loading()"
+      (page)="paginate($event)"
+      showFirstLastButtons
+      aria-label="User pages"
+    />
+  </section>
+</main>

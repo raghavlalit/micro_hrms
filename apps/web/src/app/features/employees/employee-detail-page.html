@@ -1,0 +1,311 @@
+<main class="page">
+  <a mat-button routerLink="/employees" class="back-link">← Back to employees</a>
+  @if (message()) {
+    <p class="message" [class.error]="failed()" role="status">{{ message() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading employee profile" />
+  }
+  @if (detail(); as data) {
+    <div class="page-heading">
+      <div class="profile-heading">
+        <span class="employee-avatar large"
+          >{{ data.employee.first_name.charAt(0) }}{{ data.employee.last_name.charAt(0) }}</span
+        >
+        <div>
+          <p class="eyebrow">{{ data.employee.employee_code }}</p>
+          <h1>{{ data.employee.first_name }} {{ data.employee.last_name }}</h1>
+          <p class="muted">
+            {{ data.employee.designation_name || 'Employee profile' }} ·
+            {{ data.employee.department_name || 'Department not assigned' }}
+          </p>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <span
+          class="status"
+          [class.inactive]="
+            data.employee.status === 'inactive' || data.employee.status === 'terminated'
+          "
+          >{{ data.employee.status.replace('_', ' ') }}</span
+        >
+        @if (data.access === 'manage') {
+          <a mat-flat-button [routerLink]="['/employees', data.employee.id, 'edit']">Edit profile</a
+          ><button mat-stroked-button (click)="changeStatus()" [disabled]="busy()">
+            Change status
+          </button>
+        }
+      </div>
+    </div>
+    @if (invitation()) {
+      <section class="panel profile-section">
+        <div class="panel-body">
+          <h2>Employee activation link</h2>
+          <p class="muted">
+            Share securely. No email has been sent. Expires {{ invitationExpiry() }}.
+          </p>
+          <mat-form-field appearance="outline"
+            ><mat-label>One-time activation link</mat-label
+            ><input
+              matInput
+              [value]="invitation()"
+              readonly
+              (click)="$any($event.target).select()" /></mat-form-field
+          ><button mat-button (click)="invitation.set('')">Hide link</button>
+        </div>
+      </section>
+    }
+    <div class="profile-grid">
+      <section class="panel">
+        <div class="panel-heading"><h2>Employment information</h2></div>
+        <div class="panel-body">
+          <dl class="detail-list">
+            <div>
+              <dt>Employee code</dt>
+              <dd>{{ data.employee.employee_code }}</dd>
+            </div>
+            <div>
+              <dt>Work email</dt>
+              <dd>{{ data.employee.email || 'Not provided' }}</dd>
+            </div>
+            <div>
+              <dt>Joining date</dt>
+              <dd>{{ data.employee.joining_date }}</dd>
+            </div>
+            <div>
+              <dt>Employment type</dt>
+              <dd>{{ data.employee.employment_type }}</dd>
+            </div>
+            <div>
+              <dt>Department</dt>
+              <dd>{{ data.employee.department_name || 'Unassigned' }}</dd>
+            </div>
+            <div>
+              <dt>Designation</dt>
+              <dd>{{ data.employee.designation_name || 'Unassigned' }}</dd>
+            </div>
+            <div>
+              <dt>Work location</dt>
+              <dd>{{ data.employee.location_name || 'Unassigned' }}</dd>
+            </div>
+            <div>
+              <dt>Reporting manager</dt>
+              <dd>{{ data.employee.manager_name || 'Unassigned' }}</dd>
+            </div>
+            <div>
+              <dt>Work schedule</dt>
+              <dd>{{ data.employee.work_schedule_name || 'Unassigned' }}</dd>
+            </div>
+            @if (data.access !== 'team') {
+              <div>
+                <dt>Probation ends</dt>
+                <dd>{{ data.employee.probation_ends_on || 'Not specified' }}</dd>
+              </div>
+              <div>
+                <dt>Notice date</dt>
+                <dd>{{ data.employee.notice_date || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Termination date</dt>
+                <dd>{{ data.employee.termination_date || '—' }}</dd>
+              </div>
+            }
+          </dl>
+        </div>
+      </section>
+      @if (data.access !== 'team') {
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Personal &amp; contact details</h2>
+            @if (data.access === 'self') {
+              <button
+                mat-button
+                (click)="editingContact.set(!editingContact())"
+                [disabled]="busy()"
+              >
+                {{ editingContact() ? 'Cancel' : 'Edit contact' }}
+              </button>
+            }
+          </div>
+          <div class="panel-body">
+            @if (editingContact()) {
+              <form #contactForm="ngForm" (ngSubmit)="contactForm.valid && saveContact()">
+                <app-employee-contact-fields [model]="contact" /><button
+                  mat-flat-button
+                  type="submit"
+                  [disabled]="busy()"
+                >
+                  Save contact details
+                </button>
+              </form>
+            } @else {
+              <dl class="detail-list">
+                <div>
+                  <dt>Date of birth</dt>
+                  <dd>{{ data.employee.date_of_birth || 'Not provided' }}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{{ data.employee.phone || 'Not provided' }}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{{ address() }}</dd>
+                </div>
+                <div>
+                  <dt>Emergency contact</dt>
+                  <dd>
+                    {{ data.employee.emergency_contact?.name || 'Not provided' }}<br />{{
+                      data.employee.emergency_contact?.relationship
+                    }}<br />{{ data.employee.emergency_contact?.phone }}
+                  </dd>
+                </div>
+              </dl>
+            }
+          </div>
+        </section>
+      }
+      @if (data.access === 'manage') {
+        <section class="panel span">
+          <div class="panel-heading">
+            <div>
+              <h2>Employee account</h2>
+              <p class="muted">
+                {{
+                  data.employee.account_status === 'active'
+                    ? 'This employee has activated their login account.'
+                    : data.employee.account_status === 'disabled'
+                      ? 'Login access is disabled.'
+                      : 'Invite this employee to access their company workspace.'
+                }}
+              </p>
+            </div>
+            @if (
+              data.employee.status !== 'inactive' &&
+              data.employee.status !== 'terminated' &&
+              data.employee.account_status !== 'active'
+            ) {
+              <button
+                mat-stroked-button
+                (click)="invite()"
+                [disabled]="busy() || !data.employee.email"
+              >
+                {{ data.employee.user_id ? 'Replace pending invitation' : 'Invite employee' }}
+              </button>
+            }
+          </div>
+          @if (!data.employee.email) {
+            <div class="panel-body muted">Add a work email to enable invitations.</div>
+          }
+        </section>
+      }
+      @if (data.access !== 'team') {
+        <section class="panel span">
+          <div class="panel-heading">
+            <div>
+              <h2>Bank &amp; statutory details</h2>
+              <p class="muted">
+                Protected information. Viewing and updates are recorded in the audit history.
+              </p>
+            </div>
+            @if (!privateData()) {
+              <button
+                mat-stroked-button
+                (click)="revealPrivate()"
+                [disabled]="busy() || !data.private_data_available"
+              >
+                View protected details
+              </button>
+            } @else {
+              <button mat-button (click)="privateData.set(null)" [disabled]="busy()">
+                Hide details
+              </button>
+            }
+          </div>
+          <div class="panel-body">
+            @if (!data.private_data_available) {
+              <p class="muted">
+                Protected data is not configured yet. Contact your system administrator.
+              </p>
+            } @else if (!privateData()) {
+              <p class="muted">These values stay hidden until you choose to view them.</p>
+            }
+            @if (privateData(); as values) {
+              <form #privateForm="ngForm" (ngSubmit)="privateForm.valid && savePrivate()">
+                <p class="private-warning">
+                  Use labeled fields for your company's bank metadata and statutory identifiers.
+                  {{
+                    data.access === 'self'
+                      ? 'Contact HR to request changes.'
+                      : 'Removing a field and saving clears that value.'
+                  }}
+                </p>
+                @for (section of privateSections; track section.key) {
+                  <h3>{{ section.label }}</h3>
+                  @for (field of values[section.key]; track $index; let index = $index) {
+                    <div class="private-fields">
+                      <mat-form-field appearance="outline"
+                        ><mat-label>Field label</mat-label
+                        ><input
+                          matInput
+                          [name]="section.key + '_label_' + index"
+                          [(ngModel)]="field.label"
+                          required
+                          maxlength="80"
+                          [readonly]="data.access !== 'manage'" /></mat-form-field
+                      ><mat-form-field appearance="outline"
+                        ><mat-label>Value</mat-label
+                        ><input
+                          matInput
+                          [name]="section.key + '_value_' + index"
+                          [(ngModel)]="field.value"
+                          required
+                          maxlength="250"
+                          autocomplete="off"
+                          [readonly]="data.access !== 'manage'"
+                      /></mat-form-field>
+                      @if (data.access === 'manage') {
+                        <button
+                          mat-button
+                          type="button"
+                          (click)="values[section.key].splice(index, 1)"
+                          [disabled]="busy()"
+                        >
+                          Remove
+                        </button>
+                      }
+                    </div>
+                  } @empty {
+                    <p class="muted">No details recorded.</p>
+                  }
+                  @if (data.access === 'manage') {
+                    <button
+                      mat-button
+                      type="button"
+                      (click)="values[section.key].push({ label: '', value: '' })"
+                      [disabled]="values[section.key].length >= 20 || busy()"
+                    >
+                      Add field
+                    </button>
+                  }
+                }
+                @if (data.access === 'manage') {
+                  <div class="form-actions">
+                    <button mat-flat-button type="submit" [disabled]="busy()">
+                      Save protected details
+                    </button>
+                  </div>
+                }
+              </form>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  } @else if (!loading()) {
+    <div class="empty-state">
+      <h2>Employee profile unavailable</h2>
+      <p>The record may not exist or may not be available to your account.</p>
+    </div>
+  }
+</main>

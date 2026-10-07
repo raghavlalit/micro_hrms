@@ -1,0 +1,298 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">TIME &amp; ATTENDANCE</p>
+      <h1>Holiday calendar</h1>
+      <p class="muted">Plan ahead with company-wide and local holidays.</p>
+    </div>
+    @if (data()?.can_manage) {
+      <button mat-flat-button [disabled]="loading()" (click)="edit()">
+        <span class="button-content"><app-icon name="plus" />Add holiday</span>
+      </button>
+    }
+  </div>
+  @if (error()) {
+    <p role="alert" class="message error">
+      {{ error() }} <button mat-button [disabled]="loading()" (click)="load(!data())">Retry</button>
+    </p>
+  }
+  @if (success()) {
+    <p role="status" class="message">{{ success() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading holiday calendar" />
+  }
+  @if (data(); as calendar) {
+    <form class="panel holiday-filters" [formGroup]="filters" (ngSubmit)="load()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Year</mat-label
+        ><input matInput type="number" formControlName="year" min="1900" max="2200" /><mat-error
+          >Enter a year from 1900 to 2200.</mat-error
+        ></mat-form-field
+      >
+      @if (calendar.can_manage) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"
+          ><mat-label>Calendar scope</mat-label
+          ><mat-select formControlName="scope"
+            ><mat-option value="all">All locations</mat-option
+            ><mat-option value="company">Company-wide only</mat-option
+            ><mat-option value="location">Specific location + company</mat-option
+            ><mat-option value="mine">My applicable holidays</mat-option></mat-select
+          ></mat-form-field
+        >
+        @if (filters.controls.scope.value === 'location') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"
+            ><mat-label>Location</mat-label
+            ><mat-select formControlName="location_id">
+              @for (location of calendar.locations; track location.id) {
+                <mat-option [value]="location.id"
+                  >{{ location.name }}{{ location.archived_at ? ' (archived)' : '' }}</mat-option
+                >
+              }
+            </mat-select></mat-form-field
+          >
+        }
+      }
+      <button mat-flat-button type="submit" [disabled]="loading()">Apply filters</button>
+      <p class="muted scope-note">
+        {{
+          calendar.scope === 'all'
+            ? 'All company locations'
+            : calendar.location_name || 'Company-wide holidays'
+        }}<br />Today: {{ calendar.today | date: 'mediumDate' : 'UTC' }} · {{ calendar.timezone }}
+      </p>
+    </form>
+    @if (calendar.scope === 'mine' && !calendar.location_id) {
+      <p class="muted">
+        {{
+          calendar.linked_employee
+            ? 'No work location is assigned to your profile.'
+            : 'Your account has no linked employee profile.'
+        }}
+        You can view company-wide holidays.
+      </p>
+    }
+    <div class="holiday-summary">
+      <div>
+        <span class="muted">Holiday dates in {{ calendar.year }}</span
+        ><strong>{{ calendar.summary.dates }}</strong>
+      </div>
+      <div>
+        <span class="muted">Upcoming dates this year</span
+        ><strong>{{ calendar.summary.upcoming_dates }}</strong>
+      </div>
+      <div>
+        <span class="muted">Next holiday date in this year</span
+        ><strong class="next-date">{{
+          calendar.summary.next_date
+            ? (calendar.summary.next_date | date: 'mediumDate' : 'UTC')
+            : 'None scheduled'
+        }}</strong>
+      </div>
+    </div>
+    <div class="calendar-layout">
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>
+              {{
+                view() === 'calendar'
+                  ? months[month()] + ' ' + calendar.year
+                  : 'Annual holiday list · ' + calendar.year
+              }}
+            </h2>
+            <p class="muted">
+              {{
+                calendar.scope === 'all'
+                  ? 'Location holidays apply only to employees at that location.'
+                  : 'Company-wide and applicable local holidays are included.'
+              }}
+            </p>
+          </div>
+          <div class="view-buttons">
+            <button
+              mat-button
+              [attr.aria-pressed]="view() === 'calendar'"
+              (click)="view.set('calendar')"
+            >
+              Month</button
+            ><button mat-button [attr.aria-pressed]="view() === 'list'" (click)="view.set('list')">
+              Annual list
+            </button>
+          </div>
+        </div>
+        @if (view() === 'calendar') {
+          <div class="month-toolbar">
+            <button
+              mat-button
+              aria-label="Previous month"
+              [disabled]="month() === 0"
+              (click)="moveMonth(-1)"
+            >
+              ←</button
+            ><mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Month</mat-label
+              ><mat-select [value]="month()" (selectionChange)="month.set($event.value)">
+                @for (name of months; track name; let index = $index) {
+                  <mat-option [value]="index">{{ name }}</mat-option>
+                }
+              </mat-select></mat-form-field
+            ><button
+              mat-button
+              aria-label="Next month"
+              [disabled]="month() === 11"
+              (click)="moveMonth(1)"
+            >
+              →
+            </button>
+          </div>
+          <div class="calendar-scroll">
+            <table class="month-grid" aria-label="Monthly holiday calendar">
+              <thead>
+                <tr>
+                  @for (day of weekdays; track day) {
+                    <th scope="col">{{ day }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (week of weeks(); track $index) {
+                  <tr>
+                    @for (entry of week; track $index) {
+                      <td
+                        [class.empty-day]="!entry.date"
+                        [class.today]="entry.date === calendar.today"
+                        [class.holiday-day]="entry.holidays.length"
+                      >
+                        <span
+                          class="day-number"
+                          [attr.aria-label]="
+                            entry.date === calendar.today ? 'Today ' + entry.date : entry.date
+                          "
+                          >{{ entry.day }}</span
+                        >
+                        @for (holiday of entry.holidays; track holiday.id) {
+                          <div class="calendar-event" [class.local-event]="holiday.location_id">
+                            <span>{{ holiday.name }}</span
+                            ><small>{{ holiday.location_name || 'Company-wide' }}</small>
+                          </div>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="month-details">
+            <h3>Holidays this month</h3>
+            @for (holiday of monthHolidays(); track holiday.id) {
+              <div class="holiday-detail">
+                <div>
+                  <strong>{{ holiday.name }}</strong>
+                  <p class="muted">
+                    {{ holiday.holiday_date | date: 'EEE, d MMM' : 'UTC' }} ·
+                    {{ holiday.location_name || 'Company-wide' }}
+                  </p>
+                  @if (holiday.description) {
+                    <p class="holiday-description">{{ holiday.description }}</p>
+                  }
+                </div>
+                @if (calendar.can_manage) {
+                  <button
+                    mat-button
+                    [disabled]="loading()"
+                    (click)="edit(holiday)"
+                    [attr.aria-label]="'Edit ' + holiday.name"
+                  >
+                    Edit
+                  </button>
+                }
+              </div>
+            } @empty {
+              <p class="muted">No holidays scheduled for this month and scope.</p>
+            }
+          </div>
+        } @else {
+          <div class="table-wrap">
+            <table class="data-table" aria-label="Annual holidays">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Holiday</th>
+                  <th scope="col">Applies to</th>
+                  @if (calendar.can_manage) {
+                    <th scope="col">Action</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (holiday of calendar.items; track holiday.id) {
+                  <tr>
+                    <td class="date-cell">
+                      {{ holiday.holiday_date | date: 'EEE, d MMM' : 'UTC' }}
+                    </td>
+                    <td>
+                      <span class="record-name">{{ holiday.name }}</span
+                      ><span class="record-code">{{ holiday.description }}</span>
+                    </td>
+                    <td>{{ holiday.location_name || 'Company-wide' }}</td>
+                    @if (calendar.can_manage) {
+                      <td>
+                        <button
+                          mat-button
+                          [disabled]="loading()"
+                          (click)="edit(holiday)"
+                          [attr.aria-label]="'Edit ' + holiday.name"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (!calendar.items.length) {
+            <div class="empty-state">
+              <app-icon name="calendar" />
+              <h2>No holidays scheduled</h2>
+              <p>
+                Choose another year or scope{{ calendar.can_manage ? ', or add a holiday.' : '.' }}
+              </p>
+            </div>
+          }
+        }
+      </section>
+      <aside class="panel upcoming-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Coming up</h2>
+            <p class="muted">Next entries in {{ calendar.year }}</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          @for (holiday of upcoming(); track holiday.id) {
+            <div class="upcoming-item">
+              <div class="date-tile">
+                <span>{{ holiday.holiday_date | date: 'MMM' : 'UTC' }}</span
+                ><strong>{{ holiday.holiday_date | date: 'dd' : 'UTC' }}</strong>
+              </div>
+              <div>
+                <strong>{{ holiday.name }}</strong>
+                <p class="muted">{{ holiday.location_name || 'Company-wide' }}</p>
+              </div>
+            </div>
+          } @empty {
+            <p class="muted">No upcoming holidays in this year and scope.</p>
+          }
+          <p class="muted calendar-note">
+            Each applicable date counts once. Your work schedule and leave policy determine how
+            holidays affect attendance and leave.
+          </p>
+        </div>
+      </aside>
+    </div>
+  }
+</main>

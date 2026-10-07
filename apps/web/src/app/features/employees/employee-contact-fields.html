@@ -1,0 +1,43 @@
+<div class="fields">
+  <mat-form-field appearance="outline"
+    ><mat-label>Phone number</mat-label
+    ><input matInput name="phone" [(ngModel)]="model().phone" maxlength="30" type="tel"
+  /></mat-form-field>
+  @for (field of addressFields; track field.key) {
+    <mat-form-field
+      appearance="outline"
+      [class.span]="field.key === 'line1' || field.key === 'line2'"
+      ><mat-label>{{ field.label }}</mat-label
+      ><input
+        matInput
+        [name]="'address_' + field.key"
+        [(ngModel)]="model().address[field.key]"
+        [maxlength]="field.max"
+    /></mat-form-field>
+  }
+  <mat-form-field appearance="outline"
+    ><mat-label>Emergency contact name</mat-label
+    ><input
+      matInput
+      name="emergency_name"
+      [(ngModel)]="model().emergency_contact.name"
+      maxlength="120"
+  /></mat-form-field>
+  <mat-form-field appearance="outline"
+    ><mat-label>Relationship</mat-label
+    ><input
+      matInput
+      name="emergency_relationship"
+      [(ngModel)]="model().emergency_contact.relationship"
+      maxlength="60"
+  /></mat-form-field>
+  <mat-form-field appearance="outline"
+    ><mat-label>Emergency contact phone</mat-label
+    ><input
+      matInput
+      name="emergency_phone"
+      [(ngModel)]="model().emergency_contact.phone"
+      maxlength="30"
+      type="tel"
+  /></mat-form-field>
+</div>

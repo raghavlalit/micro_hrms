@@ -1,0 +1,63 @@
+<h2 mat-dialog-title>{{ data.role ? 'Edit custom role' : 'Create custom role' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content>
+    <p class="muted">
+      Choose the permissions this role grants. Company and employee scope checks still apply.
+    </p>
+    <div class="role-fields">
+      <mat-form-field appearance="outline"
+        ><mat-label>Role name</mat-label
+        ><input matInput formControlName="name" maxlength="80" /><mat-error
+          >Enter a role name.</mat-error
+        ></mat-form-field
+      >
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Role code</mat-label
+        ><input matInput formControlName="code" maxlength="40" [readonly]="!!data.role" /><mat-hint
+          >2–40 lowercase letters, numbers or underscores; start with a letter.</mat-hint
+        ><mat-error>Use a valid lowercase role code.</mat-error></mat-form-field
+      >
+    </div>
+    <h3>
+      Permissions
+      <span class="count">{{ form.controls.permission_codes.value.length }} selected</span>
+    </h3>
+    @if (form.controls.permission_codes.touched && form.controls.permission_codes.invalid) {
+      <p role="alert" class="message error">Select at least one permission.</p>
+    }
+    <div class="permission-options">
+      @for (permission of data.permissions; track permission.code) {
+        <mat-checkbox
+          [checked]="form.controls.permission_codes.value.includes(permission.code)"
+          [disabled]="busy() || !session.user()?.permissions?.includes(permission.code)"
+          (change)="toggle(permission.code, $event.checked)"
+          ><span>{{ permission.description }}</span
+          ><small>{{ permission.code }}</small></mat-checkbox
+        >
+      }
+    </div>
+    @if (data.role) {
+      <p class="muted">
+        Saving affects {{ data.role.user_count }} assigned user(s) and signs them out. Their other
+        roles remain assigned.
+      </p>
+    }
+    <mat-form-field appearance="outline"
+      ><mat-label>Reason for this change</mat-label
+      ><textarea matInput formControlName="reason" rows="2" maxlength="500"></textarea
+      ><mat-error>Enter a reason of at least 3 characters.</mat-error></mat-form-field
+    >
+    @if (error()) {
+      <p role="alert" class="message error">{{ error() }}</p>
+    }
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Saving role" />
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"
+    ><button mat-button type="button" [disabled]="busy()" (click)="dialog.close()">Cancel</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      {{ busy() ? 'Saving…' : 'Save role' }}
+    </button></mat-dialog-actions
+  >
+</form>

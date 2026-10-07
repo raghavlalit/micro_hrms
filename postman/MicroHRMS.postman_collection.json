@@ -1,0 +1,3958 @@
+{
+  "info": {
+    "_postman_id": "b907ed20-8287-4c02-95b6-36fb3c922da0",
+    "name": "Micro HRMS — Completed APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Maintained with each completed topic. Import the environment template and read postman/README.md. Session cookies, not bearer tokens. Select individual requests/folders intentionally: this is an API reference, not an all-at-once runner scenario. Writes modify the selected environment. Only implemented routes are included; leave/payroll/documents folders currently contain master settings only."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!['GET', 'HEAD', 'OPTIONS'].includes(pm.request.method)) pm.request.headers.upsert({ key: 'X-HRMS-Request', value: '1' });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 — API connectivity",
+      "item": [
+        {
+          "name": "API root",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
+            },
+            "description": "Public connectivity check; returns text. This is not a database readiness endpoint."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 — Authentication",
+      "item": [
+        {
+          "name": "Login — platform administrator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Postman saves the session cookie automatically. Default email is microhrms@yopmail.com; supply your actual password locally. Logging in replaces the current session cookie for this host.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"platform\",\n  \"email\": \"{{platform_email}}\",\n  \"password\": \"{{platform_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login — company user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Use Company Admin/HR for management requests. Change tenant_email and tenant_password to test another user. Company is the slug, not the tenant UUID.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"tenant\",\n  \"company\": \"{{company_slug}}\",\n  \"email\": \"{{tenant_email}}\",\n  \"password\": \"{{tenant_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.set('current_user_id', data.user.id); pm.environment.set('tenant_id', data.user.tenantId); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login — employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Use after employee activation. This replaces the admin session cookie. Log in as the company admin again before management requests.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"tenant\",\n  \"company\": \"{{company_slug}}\",\n  \"email\": \"{{employee_email}}\",\n  \"password\": \"{{activation_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Current session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Returns current account and permissions. It does not overwrite target user_id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.set('current_user_id', data.user.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Activate latest invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "activate"
+              ]
+            },
+            "description": "Uses the most recently issued invitation token (company admin, standalone user or employee). Choose the intended account password, minimum 15 characters. Activation does not log in. For a new company admin, use this same password as tenant_password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{activation_token}}\",\n  \"password\": \"{{activation_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.unset('activation_token'); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Change current password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "password"
+              ]
+            },
+            "description": "Changes the currently signed-in account password and revokes sessions. Required first for a platform account with a temporary password. Set current_password and new_password locally, then update the matching login password variable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{current_password}}\",\n  \"newPassword\": \"{{new_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Logout current session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Signs out the active cookie session.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Logout all sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout-all"
+              ]
+            },
+            "description": "Revokes every session for the current account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "No public registration or forgot/reset password API is currently exposed. Do not add placeholders for unimplemented routes."
+    },
+    {
+      "name": "02 — Platform company onboarding",
+      "item": [
+        {
+          "name": "Platform access check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform/overview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform",
+                "overview"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform/companies?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform",
+                "companies"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create company and initial administrator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform/companies",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform",
+                "companies"
+              ]
+            },
+            "description": "Requires platform login. Creates real company defaults and an invited company administrator. Use a unique company_slug. Saves tenant_id and activation_token. Activate, then log in as the company user.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{company_name}}\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"currency\": \"INR\",\n  \"date_format\": \"dd/MM/yyyy\",\n  \"contact_email\": \"{{tenant_email}}\",\n  \"contact_phone\": \"\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  },\n  \"slug\": \"{{company_slug}}\",\n  \"admin_name\": \"Postman Company Admin\",\n  \"admin_email\": \"{{tenant_email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('tenant_id', data.company.id); pm.environment.set('activation_token', data.invitation.token); pm.environment.set('activation_expires_at', data.invitation.expires_at); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reissue initial administrator invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform/companies/{{tenant_id}}/admin-invitation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform",
+                "companies",
+                "{{tenant_id}}",
+                "admin-invitation"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('activation_token', data.invitation.token); pm.environment.set('activation_expires_at', data.invitation.expires_at); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Platform login is required. Platform accounts cannot access employee or company-user records."
+    },
+    {
+      "name": "03 — Company settings",
+      "item": [
+        {
+          "name": "Company access check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/access",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "access"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get company settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "settings"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update company settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/company/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "company",
+                "settings"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{company_name}}\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"currency\": \"INR\",\n  \"date_format\": \"dd/MM/yyyy\",\n  \"contact_email\": \"{{tenant_email}}\",\n  \"contact_phone\": \"\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Tenant permission: company.manage. Review the full sample profile before sending an update."
+    },
+    {
+      "name": "04 — Organization masters",
+      "item": [
+        {
+          "name": "Departments",
+          "item": [
+            {
+              "name": "List departments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "departments"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create departments",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "departments"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DEPT\",\n  \"name\": \"Postman Department\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('department_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update departments",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/departments/{{department_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "departments",
+                    "{{department_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DEPT\",\n  \"name\": \"Postman Department\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: company.manage. The create request saves department_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Designations",
+          "item": [
+            {
+              "name": "List designations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/designations",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "designations"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create designations",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/designations",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "designations"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DESIGNATION\",\n  \"name\": \"Postman Designation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('designation_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update designations",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/designations/{{designation_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "designations",
+                    "{{designation_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DESIGNATION\",\n  \"name\": \"Postman Designation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: company.manage. The create request saves designation_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Locations",
+          "item": [
+            {
+              "name": "List locations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/locations",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "locations"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create locations",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/locations",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "locations"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_LOCATION\",\n  \"name\": \"Postman Location\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('location_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update locations",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/locations/{{location_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "locations",
+                    "{{location_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_LOCATION\",\n  \"name\": \"Postman Location\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: company.manage. The create request saves location_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Work schedules",
+          "item": [
+            {
+              "name": "List work schedules",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/work-schedules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "work-schedules"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create work schedules",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/work-schedules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "work-schedules"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Schedule\",\n  \"location_id\": null,\n  \"working_days\": [\n    1,\n    2,\n    3,\n    4,\n    5\n  ],\n  \"start_time\": \"09:00\",\n  \"end_time\": \"18:00\",\n  \"late_grace_minutes\": 10,\n  \"half_day_minutes\": 240,\n  \"full_day_minutes\": 480\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('work_schedule_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update work schedules",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/organization/work-schedules/{{work_schedule_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "work-schedules",
+                    "{{work_schedule_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Schedule\",\n  \"location_id\": null,\n  \"working_days\": [\n    1,\n    2,\n    3,\n    4,\n    5\n  ],\n  \"start_time\": \"09:00\",\n  \"end_time\": \"18:00\",\n  \"late_grace_minutes\": 10,\n  \"half_day_minutes\": 240,\n  \"full_day_minutes\": 480\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: company.manage. The create request saves work_schedule_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        }
+      ]
+    },
+    {
+      "name": "05 — Other master settings",
+      "item": [
+        {
+          "name": "Leave types",
+          "item": [
+            {
+              "name": "List leave types",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/types",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "types"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create leave types",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/types",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "types"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_LEAVE\",\n  \"name\": \"Postman Leave\",\n  \"description\": \"Sample leave type\",\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('leave_type_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update leave types",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/types/{{leave_type_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "types",
+                    "{{leave_type_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_LEAVE\",\n  \"name\": \"Postman Leave\",\n  \"description\": \"Sample leave type\",\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: leave.manage. The create request saves leave_type_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Leave policies",
+          "item": [
+            {
+              "name": "List leave policies",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/policies",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "policies"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create leave policies",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/policies",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "policies"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 12,\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('leave_policy_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update leave policies",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/leave/policies/{{leave_policy_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "leave",
+                    "policies",
+                    "{{leave_policy_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 12,\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: leave.manage. The create request saves leave_policy_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Salary components",
+          "item": [
+            {
+              "name": "List salary components",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/payroll/components",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "payroll",
+                    "components"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create salary components",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/payroll/components",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "payroll",
+                    "components"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_COMPONENT\",\n  \"name\": \"Postman Allowance\",\n  \"kind\": \"earning\",\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('salary_component_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update salary components",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/payroll/components/{{salary_component_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "payroll",
+                    "components",
+                    "{{salary_component_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_COMPONENT\",\n  \"name\": \"Postman Allowance\",\n  \"kind\": \"earning\",\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: payroll.manage. The create request saves salary_component_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        },
+        {
+          "name": "Document categories",
+          "item": [
+            {
+              "name": "List document categories",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/documents/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "documents",
+                    "categories"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create document categories",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/documents/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "documents",
+                    "categories"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DOCUMENT\",\n  \"name\": \"Postman Category\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('document_category_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update document categories",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/documents/categories/{{document_category_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "documents",
+                    "categories",
+                    "{{document_category_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PM_DOCUMENT\",\n  \"name\": \"Postman Category\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: documents.manage. The create request saves document_category_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        }
+      ],
+      "description": "Only implemented master CRUD. Leave requests, payroll runs and document uploads are not implemented yet. Holiday calendar requests are in folder 08."
+    },
+    {
+      "name": "06 — Employees",
+      "item": [
+        {
+          "name": "List employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "department_id",
+                  "value": "{{department_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "designation_id",
+                  "value": "{{designation_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "location_id",
+                  "value": "{{location_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "manager_id",
+                  "value": "{{manager_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Organization and manager lookups",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/lookups",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "lookups"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "Requires employees.manage. Use a unique employee_code/email. Optional organization IDs default to null; replace with same-company IDs from lookups to assign them. Creates an Invited profile without a login account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_code\": \"{{employee_code}}\",\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Employee\",\n  \"email\": \"{{employee_email}}\",\n  \"joining_date\": \"2026-01-01\",\n  \"employment_type\": \"Full-time\",\n  \"date_of_birth\": \"1995-01-01\",\n  \"phone\": \"\",\n  \"department_id\": null,\n  \"designation_id\": null,\n  \"location_id\": null,\n  \"manager_id\": null,\n  \"work_schedule_id\": null,\n  \"probation_ends_on\": null,\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  },\n  \"emergency_contact\": {\n    \"name\": \"Sample contact\",\n    \"relationship\": \"Sibling\",\n    \"phone\": \"9000000000\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('employee_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get employee profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}"
+              ]
+            },
+            "description": "HR sees full company profiles; managers see direct-report work data; employees see their own allowed data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update employee profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}"
+              ]
+            },
+            "description": "Review all fields before sending. This sample replaces profile fields; it is not a partial patch. Email cannot change once linked to an account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_code\": \"{{employee_code}}\",\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Employee\",\n  \"email\": \"{{employee_email}}\",\n  \"joining_date\": \"2026-01-01\",\n  \"employment_type\": \"Full-time\",\n  \"date_of_birth\": \"1995-01-01\",\n  \"phone\": \"\",\n  \"department_id\": null,\n  \"designation_id\": null,\n  \"location_id\": null,\n  \"manager_id\": null,\n  \"work_schedule_id\": null,\n  \"probation_ends_on\": null,\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  },\n  \"emergency_contact\": {\n    \"name\": \"Sample contact\",\n    \"relationship\": \"Sibling\",\n    \"phone\": \"9000000000\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Set employee Active",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "status"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"reason\": \"Employment confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Set employee On Notice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "status"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"on_notice\",\n  \"reason\": \"Notice recorded\",\n  \"notice_date\": \"{{lifecycle_date}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Set employee Inactive",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "status"
+              ]
+            },
+            "description": "Disables the linked account immediately and revokes access. Current reports must be reassigned first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\",\n  \"reason\": \"Employment made inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Terminate employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "status"
+              ]
+            },
+            "description": "Immediate exit, not scheduling. Date must be on/after joining and notice date, and no later than today in the company timezone. Revokes linked login access; retains history.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"terminated\",\n  \"reason\": \"Employment ended\",\n  \"termination_date\": \"{{lifecycle_date}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Invite or reissue employee account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/invitation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "invitation"
+              ]
+            },
+            "description": "Role may be employee or manager. Reissue preserves existing roles. Saves activation_token; activate, then use employee login.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"employee\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('activation_token', data.invitation.token); pm.environment.set('activation_expires_at', data.invitation.expires_at); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Read protected employee details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/private",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "private"
+              ]
+            },
+            "description": "Explicit audited read, HR or self only. Requires valid API encryption configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update protected employee details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/{{employee_id}}/private",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "{{employee_id}}",
+                "private"
+              ]
+            },
+            "description": "HR only. Replaces both categories; an empty array clears a category. Use sample data in testing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bank_details\": [\n    {\n      \"label\": \"Account reference\",\n      \"value\": \"POSTMAN-SAMPLE-NOT-A-REAL-ACCOUNT\"\n    }\n  ],\n  \"statutory_identifiers\": [\n    {\n      \"label\": \"Tax reference\",\n      \"value\": \"POSTMAN-SAMPLE-NOT-A-REAL-ID\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My employee profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "me"
+              ]
+            },
+            "description": "Log in as a user linked to an employee, with employees.read.self."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update my contact details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/me/contact",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "me",
+                "contact"
+              ]
+            },
+            "description": "Self-service only: contact details are editable; HR-controlled fields are rejected.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9000000000\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  },\n  \"emergency_contact\": {\n    \"name\": \"Sample contact\",\n    \"relationship\": \"Sibling\",\n    \"phone\": \"9000000001\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 — Users and roles",
+      "item": [
+        {
+          "name": "Roles and permission catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "description": "Run first to populate built-in role ID variables. Permission: roles.manage. Built-in roles are read-only; custom roles are company-specific."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); for (const role of data.roles) { if (['company_admin','hr','manager','employee'].includes(role.code)) pm.environment.set(role.code + '_role_id', role.id); } }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "role_id",
+                  "value": "{{employee_role_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Invite standalone user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Run role catalog first. Saves target user_id and activation_token. For an existing employee use their profile invitation endpoint instead.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Postman User\",\n  \"email\": \"{{invited_user_email}}\",\n  \"role_ids\": [\n    \"{{employee_role_id}}\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('user_id', data.id);pm.environment.set('activation_token', data.invitation.token); pm.environment.set('activation_expires_at', data.invitation.expires_at); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Assign built-in role to user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "roles"
+              ]
+            },
+            "description": "Replaces the complete role list. Add more same-company role IDs for multiple roles. Revokes existing sessions; self-change and last-admin removal are blocked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_ids\": [\n    \"{{manager_role_id}}\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Disable user account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "status"
+              ]
+            },
+            "description": "Immediately revokes sessions and pending tokens. Employment status stays unchanged. Cannot disable self or the last active Company Admin.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"disabled\",\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Enable user account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "status"
+              ]
+            },
+            "description": "Cannot bypass an inactive/terminated employee. An unactivated user returns to Invited and needs a fresh invitation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"enabled\",\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reissue user invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/invitation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "invitation"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('activation_token', data.invitation.token); pm.environment.set('activation_expires_at', data.invitation.expires_at); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create custom role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{custom_role_code}}\",\n  \"name\": \"Postman Profile Reader\",\n  \"permission_codes\": [\n    \"employees.read.self\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('custom_role_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit custom role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/{{custom_role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                "{{custom_role_id}}"
+              ]
+            },
+            "description": "Role code is immutable. Cannot edit built-in roles or a role assigned to yourself. Editing revokes sessions of assigned users.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Team Reader\",\n  \"permission_codes\": [\n    \"employees.read.self\",\n    \"employees.read.team\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Assign custom role to user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "roles"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_ids\": [\n    \"{{custom_role_id}}\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "All requests require roles.manage. You cannot grant permissions beyond your current access. Changes require an audit reason. No user/role deletion API is exposed."
+    },
+    {
+      "name": "08 — Holiday calendar",
+      "item": [
+        {
+          "name": "My applicable holiday calendar",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/holidays/calendar?year={{holiday_year}}&scope=mine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "holidays",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{holiday_year}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "mine"
+                }
+              ]
+            },
+            "description": "Any active tenant account. Uses the linked employee location plus company-wide holidays; unlinked/unassigned users get company-wide dates only. Employees cannot supply a location or broaden scope. The year can be omitted to use the current company-timezone year."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "All locations calendar — administrator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/holidays/calendar?year={{holiday_year}}&scope=all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "holidays",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{holiday_year}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "all"
+                }
+              ]
+            },
+            "description": "Requires company.manage. Includes location lookup options, date-only holiday entries, company timezone/today and deduplicated annual/upcoming date counts."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Company-wide calendar — administrator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/holidays/calendar?year={{holiday_year}}&scope=company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "holidays",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{holiday_year}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "company"
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Location calendar — administrator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/holidays/calendar?year={{holiday_year}}&scope=location&location_id={{location_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "holidays",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{holiday_year}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "location"
+                },
+                {
+                  "key": "location_id",
+                  "value": "{{location_id}}"
+                }
+              ]
+            },
+            "description": "Requires company.manage and a same-company location. Includes company-wide holidays plus this location. Archived locations can be reviewed for history."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Holiday records",
+          "item": [
+            {
+              "name": "List holiday records",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/holidays",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "holidays"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Create holiday records",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/holidays",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "holidays"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Holiday\",\n  \"holiday_date\": \"{{holiday_date}}\",\n  \"location_id\": null,\n  \"description\": \"Review date and location before creating\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                      "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('holiday_id', data.id); }"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "Update holiday records",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/holidays/{{holiday_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "holidays",
+                    "{{holiday_id}}"
+                  ]
+                },
+                "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Holiday\",\n  \"holiday_date\": \"{{holiday_date}}\",\n  \"location_id\": null,\n  \"description\": \"Review date and location before creating\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            }
+          ],
+          "description": "Tenant permission: company.manage. The create request saves holiday_id. Updates use that ID; list requests never select an existing record for modification automatically."
+        }
+      ],
+      "description": "Create/update requires company.manage. Company-wide dates cannot overlap any local holiday; different locations may share a date. Set location_id in the write body to a same-company active location for a local holiday. Existing legacy overlaps are displayed but count once. No deletion API or automatic public-holiday import is provided."
+    },
+    {
+      "name": "09 — Attendance",
+      "item": [
+        {
+          "name": "My monthly attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/me?month={{attendance_month}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "me"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "{{attendance_month}}"
+                }
+              ]
+            },
+            "description": "Requires attendance.self and a linked employee. Omit month for the company-timezone current month. Returns recorded and explicitly marked projected days, schedule settings, summaries and today actions."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Find permitted employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/people?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "people"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "attendance.manage sees company employees; attendance.approve.team sees direct reports only. Use a returned id as employee_id. Supports search/page/limit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employee monthly attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/employees/{{employee_id}}?month={{attendance_month}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "employees",
+                "{{employee_id}}"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "{{attendance_month}}"
+                }
+              ]
+            },
+            "description": "HR, permitted direct-report manager, or employee self. No personal/bank data is returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Check in now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/check-in",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "check-in"
+              ]
+            },
+            "description": "Log in as an active/on-notice employee with attendance.self and an assigned or unambiguous applicable schedule. Server time determines the date and timestamp. One pair per date; never accepts employee_id or client timestamps.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Check out now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/check-out",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "check-out"
+              ]
+            },
+            "description": "Completes today’s open check-in. For a prior-day missed checkout, submit a correction. Hours/status use saved schedule rules.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"web\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Request attendance correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/regularizations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "regularizations"
+              ]
+            },
+            "description": "Self-service only. Both timestamps require Z or an explicit UTC offset, must fall on work_date in the recorded company timezone, and cannot be future times. Saves regularization_id. One pending request per date.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"work_date\": \"{{attendance_date}}\",\n  \"check_in\": \"{{attendance_check_in}}\",\n  \"check_out\": \"{{attendance_check_out}}\",\n  \"reason\": \"Missed checkout; please review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('regularization_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My correction requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/regularizations?page=1&limit=20&scope=mine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "regularizations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "scope",
+                  "value": "mine"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Corrections awaiting review",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/regularizations?page=1&limit=20&scope=review&status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "regularizations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "scope",
+                  "value": "review"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "HR or direct-report manager. Excludes your own requests. Switch to another authorized reviewer account after submitting a request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Approve correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/regularizations/{{regularization_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "regularizations",
+                "{{regularization_id}}",
+                "review"
+              ]
+            },
+            "description": "Applies once. Rejects self-review, stale attendance and locked payroll dates. Preserves original values and audits changes.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approved\",\n  \"comment\": \"Verified working hours\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/regularizations/{{regularization_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "regularizations",
+                "{{regularization_id}}",
+                "review"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"rejected\",\n  \"comment\": \"Please submit the corrected times\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "HR time adjustment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/employees/{{employee_id}}/days/{{attendance_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "employees",
+                "{{employee_id}}",
+                "days",
+                "{{attendance_date}}"
+              ]
+            },
+            "description": "Requires attendance.manage. Replaces times and recalculates status. Saved schedule snapshots are retained. Existing pending requests become stale and must be rejected/resubmitted.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"times\",\n  \"check_in\": \"{{attendance_check_in}}\",\n  \"check_out\": \"{{attendance_check_out}}\",\n  \"reason\": \"Verified HR correction\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "HR non-working status adjustment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance/employees/{{employee_id}}/days/{{attendance_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance",
+                "employees",
+                "{{employee_id}}",
+                "days",
+                "{{attendance_date}}"
+              ]
+            },
+            "description": "Allowed modes: absent, leave, holiday, weekly_off. Replaces times with null and worked minutes with zero. Leave here is an HR attendance marker; it does not alter leave balances.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"absent\",\n  \"check_in\": null,\n  \"check_out\": null,\n  \"reason\": \"Verified no attendance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Single daily pair; no overnight shifts, overtime or multiple breaks. Set employee work schedule before testing. Times and business dates use company timezone. Locked payroll dates cannot be changed. Run individual requests intentionally, with the appropriate self/manager/HR identity."
+    }
+  ]
+}

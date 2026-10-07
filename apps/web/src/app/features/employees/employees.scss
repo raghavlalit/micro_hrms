@@ -1,0 +1,130 @@
+:host {
+  display: block;
+}
+.fields {
+  row-gap: 18px;
+}
+.profile-heading {
+  min-width: 0;
+}
+.profile-heading h1 {
+  overflow-wrap: anywhere;
+}
+.employee-filters {
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.employee-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.employee-avatar {
+  background: #e6f1ed;
+  color: #2b6957;
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-content: center;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+.employee-avatar.large {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+  border-radius: 16px;
+}
+.record-name {
+  text-decoration: none;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.profile-grid > .span {
+  grid-column: 1/-1;
+}
+.detail-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  gap: 22px;
+}
+.detail-list dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.detail-list dd {
+  font-size: 13px;
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.private-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+.private-warning {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.profile-section {
+  margin-bottom: 24px;
+}
+.dialog-form {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+@media (max-width: 1100px) {
+  .employee-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .employee-filters,
+  .profile-grid,
+  .detail-list {
+    grid-template-columns: 1fr;
+  }
+  .employee-filters {
+    padding: 18px;
+  }
+  .profile-heading {
+    align-items: flex-start;
+  }
+  .private-fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

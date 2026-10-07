@@ -1,0 +1,224 @@
+.holiday-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 20px 24px;
+  margin-bottom: 22px;
+}
+.holiday-filters mat-form-field {
+  width: 230px;
+}
+.holiday-filters mat-form-field:first-child {
+  width: 125px;
+}
+.scope-note {
+  margin-left: auto;
+}
+.holiday-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.holiday-summary > div {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 20px 24px;
+}
+.holiday-summary strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 9px;
+  font-weight: 650;
+}
+.holiday-summary .next-date {
+  font-size: 22px;
+}
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 24px;
+  align-items: start;
+}
+.view-buttons {
+  display: flex;
+  flex-shrink: 0;
+}
+.view-buttons button[aria-pressed='true'] {
+  background: #e8f3ee;
+}
+.month-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+}
+.month-toolbar mat-form-field {
+  width: 180px;
+}
+.calendar-scroll {
+  overflow-x: auto;
+}
+.month-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 580px;
+}
+.month-grid th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 12px 6px;
+  background: #f8fafb;
+}
+.month-grid td {
+  vertical-align: top;
+  border: 1px solid #e9efed;
+  height: 102px;
+  padding: 7px;
+}
+.day-number {
+  display: inline-block;
+  font-size: 12px;
+  min-width: 24px;
+  padding: 4px;
+  text-align: center;
+}
+.today .day-number {
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+}
+.empty-day {
+  background: #fafcfc;
+}
+.holiday-day {
+  background: #f7fbf9;
+}
+.calendar-event {
+  border-left: 2px solid #3d8d72;
+  background: #e5f2ec;
+  color: #245b48;
+  padding: 5px;
+  font-size: 10px;
+  border-radius: 3px;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.calendar-event small {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+}
+.local-event {
+  border-color: #6876b6;
+  background: #eff0fa;
+  color: #444f86;
+}
+.month-details {
+  padding: 20px 24px;
+}
+.month-details h3 {
+  font-size: 14px;
+}
+.holiday-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 15px 0;
+  font-size: 13px;
+}
+.holiday-detail p {
+  margin: 5px 0;
+}
+.holiday-description {
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.upcoming-item p {
+  margin: 4px 0 0;
+}
+.date-tile {
+  min-width: 46px;
+  text-align: center;
+  background: #edf5f1;
+  padding: 8px 5px;
+  border-radius: 7px;
+  color: var(--accent);
+}
+.date-tile span {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.date-tile strong {
+  font-size: 21px;
+}
+.calendar-note {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.date-cell {
+  white-space: nowrap;
+}
+mat-dialog-content > mat-form-field {
+  margin-top: 8px;
+}
+@media (max-width: 1150px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+  .upcoming-panel .panel-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px 24px;
+  }
+  .calendar-note {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 650px) {
+  .holiday-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .holiday-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    gap: 14px;
+  }
+  .holiday-summary strong {
+    margin: 0;
+    font-size: 22px;
+  }
+  .holiday-summary .next-date {
+    font-size: 17px;
+  }
+  .holiday-filters mat-form-field,
+  .holiday-filters mat-form-field:first-child {
+    width: 100%;
+  }
+  .scope-note {
+    margin-left: 0;
+  }
+  .panel-heading {
+    flex-wrap: wrap;
+  }
+}

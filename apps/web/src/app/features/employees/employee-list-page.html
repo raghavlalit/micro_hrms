@@ -1,0 +1,151 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">PEOPLE &amp; ORGANIZATION</p>
+      <h1>{{ canManage() ? 'Employees' : 'My team & profile' }}</h1>
+      <p class="muted">
+        {{
+          canManage()
+            ? 'Manage your people, employment details and access.'
+            : 'View the employee profiles available to your account.'
+        }}
+      </p>
+    </div>
+    @if (canManage()) {
+      <a mat-flat-button routerLink="new"
+        ><span class="button-content"><app-icon name="plus" />Add employee</span></a
+      >
+    }
+  </div>
+  @if (message()) {
+    <p role="alert" class="message error">{{ message() }}</p>
+  }
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>
+          Employee directory <span class="count">{{ total }}</span>
+        </h2>
+        <p class="muted">
+          {{
+            canManage()
+              ? 'Find an employee and open their profile.'
+              : 'Team access is limited to your direct reports; personal details remain private.'
+          }}
+        </p>
+      </div>
+    </div>
+    <form class="employee-filters" (ngSubmit)="apply()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="employee-search"
+        ><mat-label>Search employees</mat-label
+        ><input
+          matInput
+          name="search"
+          [(ngModel)]="search"
+          placeholder="Name, code or email"
+          [disabled]="loading()" /></mat-form-field
+      ><mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Status</mat-label
+        ><mat-select name="status" [(ngModel)]="status" [disabled]="loading()"
+          ><mat-option value="">All statuses</mat-option>
+          @for (option of statuses; track option) {
+            <mat-option [value]="option">{{ option.replace('_', ' ') }}</mat-option>
+          }
+        </mat-select></mat-form-field
+      >
+      @if (lookups(); as options) {
+        @for (filter of filters; track filter.key) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"
+            ><mat-label>{{ filter.label }}</mat-label
+            ><mat-select
+              [name]="filter.key"
+              [(ngModel)]="assignments[filter.key]"
+              [disabled]="loading()"
+              ><mat-option value="">All</mat-option>
+              @for (option of options[filter.source]; track option.id) {
+                <mat-option [value]="option.id">{{ option.name }}</mat-option>
+              }
+            </mat-select></mat-form-field
+          >
+        }
+      }
+      <div class="filter-actions">
+        <button mat-flat-button type="submit" [disabled]="loading()">Apply filters</button
+        ><button mat-button type="button" (click)="clear()" [disabled]="loading()">Reset</button>
+      </div>
+    </form>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading employees" />
+    }
+    @if (rows().length) {
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Employees">
+          <thead>
+            <tr>
+              <th scope="col">Employee</th>
+              <th scope="col">Department / designation</th>
+              <th scope="col">Location</th>
+              <th scope="col">Joining date</th>
+              <th scope="col">Status</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (employee of rows(); track employee.id) {
+              <tr>
+                <td>
+                  <div class="employee-name">
+                    <span class="employee-avatar"
+                      >{{ employee.first_name.charAt(0) }}{{ employee.last_name.charAt(0) }}</span
+                    >
+                    <div>
+                      <a class="record-name" [routerLink]="[employee.id]"
+                        >{{ employee.first_name }} {{ employee.last_name }}</a
+                      ><span class="record-code"
+                        >{{ employee.employee_code }} ·
+                        {{ employee.email || 'No work email' }}</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {{ employee.department_name || 'Unassigned' }}
+                  <div class="record-code">{{ employee.designation_name || '—' }}</div>
+                </td>
+                <td>{{ employee.location_name || '—' }}</td>
+                <td class="nowrap">{{ employee.joining_date }}</td>
+                <td>
+                  <span
+                    class="status"
+                    [class.inactive]="
+                      employee.status === 'inactive' || employee.status === 'terminated'
+                    "
+                    [class.trial]="employee.status === 'invited' || employee.status === 'on_notice'"
+                    >{{ employee.status.replace('_', ' ') }}</span
+                  >
+                </td>
+                <td><a mat-button [routerLink]="[employee.id]">View profile</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!loading()) {
+      <div class="empty-state">
+        <app-icon name="team" />
+        <h2>{{ message() ? 'Directory unavailable' : 'No employees found' }}</h2>
+        <p>Try another filter or add your first employee if you have management access.</p>
+      </div>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="[20, 50, 100]"
+      [disabled]="loading()"
+      (page)="paginate($event)"
+      showFirstLastButtons
+      aria-label="Employee pages"
+    />
+  </section>
+</main>

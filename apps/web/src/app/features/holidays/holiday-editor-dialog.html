@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>{{ data.holiday ? 'Edit holiday' : 'Add holiday' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content>
+    <p class="muted">
+      Company-wide holidays apply to everyone. Choose a location for a local holiday.
+    </p>
+    <mat-form-field appearance="outline"
+      ><mat-label>Holiday name</mat-label
+      ><input matInput formControlName="name" maxlength="120" /><mat-error
+        >Enter a holiday name.</mat-error
+      ></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Holiday date</mat-label
+      ><input
+        matInput
+        type="date"
+        formControlName="holiday_date"
+        min="1900-01-01"
+        max="2200-12-31"
+      /><mat-error>Choose a valid date between 1900 and 2200.</mat-error></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Applies to</mat-label
+      ><mat-select formControlName="location_id"
+        ><mat-option value="">Everyone in the company</mat-option>
+        @for (location of locations; track location.id) {
+          <mat-option [value]="location.id"
+            >{{ location.name }}{{ location.archived_at ? ' (archived)' : '' }}</mat-option
+          >
+        }
+      </mat-select></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Description (optional)</mat-label
+      ><textarea matInput formControlName="description" maxlength="500" rows="3"></textarea>
+    </mat-form-field>
+    <p class="muted">
+      The same date cannot overlap a company-wide holiday or another holiday for this location.
+    </p>
+    @if (error()) {
+      <p role="alert" class="message error">{{ error() }}</p>
+    }
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Saving holiday" />
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"
+    ><button mat-button type="button" [disabled]="busy()" (click)="dialog.close()">Cancel</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      {{ busy() ? 'Saving…' : 'Save holiday' }}
+    </button></mat-dialog-actions
+  >
+</form>

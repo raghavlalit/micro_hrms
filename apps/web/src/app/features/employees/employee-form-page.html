@@ -1,0 +1,158 @@
+<main class="page">
+  <a mat-button class="back-link" [routerLink]="id ? ['/employees', id] : ['/employees']"
+    >← {{ id ? 'Back to profile' : 'Back to employees' }}</a
+  >
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">EMPLOYEE MANAGEMENT</p>
+      <h1>{{ id ? 'Edit employee' : 'Add employee' }}</h1>
+      <p class="muted">Keep personal and employment information together in one profile.</p>
+    </div>
+  </div>
+  @if (message()) {
+    <p class="message error" role="alert">{{ message() }}</p>
+  }
+  @if (!ready() && !message()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading employee form" />
+  }
+  @if (ready()) {
+    <div class="form-layout">
+      <form class="panel" #employeeForm="ngForm" (ngSubmit)="employeeForm.valid && save()">
+        <section class="form-section">
+          <h2>01 &nbsp; Personal information</h2>
+          <p class="muted">Required details are marked with an asterisk.</p>
+          <div class="fields">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Employee code</mat-label
+              ><input
+                matInput
+                name="employee_code"
+                [(ngModel)]="profile.employee_code"
+                required
+                pattern="[A-Z0-9][A-Z0-9_-]{0,39}"
+                maxlength="40"
+              /><mat-hint>Unique in your company. Uppercase letters, numbers, - or _.</mat-hint
+              ><mat-error>Enter a valid employee code.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Work email</mat-label
+              ><input
+                matInput
+                type="email"
+                email
+                name="email"
+                [(ngModel)]="profile.email"
+                maxlength="254"
+                [readonly]="linkedAccount"
+              /><mat-hint>{{
+                linkedAccount
+                  ? 'Linked to the employee login account.'
+                  : 'Required when inviting this employee.'
+              }}</mat-hint
+              ><mat-error>Enter a valid email.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>First name</mat-label
+              ><input
+                matInput
+                name="first_name"
+                [(ngModel)]="profile.first_name"
+                required
+                maxlength="100"
+                pattern=".*\S.*"
+              /><mat-error>First name is required.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Last name</mat-label
+              ><input
+                matInput
+                name="last_name"
+                [(ngModel)]="profile.last_name"
+                required
+                maxlength="100"
+                pattern=".*\S.*"
+              /><mat-error>Last name is required.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Date of birth</mat-label
+              ><input matInput type="date" name="date_of_birth" [(ngModel)]="profile.date_of_birth"
+            /></mat-form-field>
+          </div>
+        </section>
+        <section class="form-section">
+          <h2>02 &nbsp; Employment details</h2>
+          <p class="muted">Assign organization details and reporting relationships.</p>
+          <div class="fields">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Joining date</mat-label
+              ><input
+                matInput
+                type="date"
+                name="joining_date"
+                [(ngModel)]="profile.joining_date"
+                required
+              /><mat-error>Joining date is required.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Employment type</mat-label
+              ><input
+                matInput
+                name="employment_type"
+                [(ngModel)]="profile.employment_type"
+                required
+                maxlength="60"
+                placeholder="Full-time, Part-time, Contract…"
+              /><mat-error>Employment type is required.</mat-error></mat-form-field
+            >
+            @for (field of assignments; track field.key) {
+              <mat-form-field appearance="outline" subscriptSizing="dynamic"
+                ><mat-label>{{ field.label }}</mat-label
+                ><mat-select [name]="field.key" [(ngModel)]="profile[field.key]"
+                  ><mat-option [value]="null">Not assigned</mat-option>
+                  @for (option of lookups()[field.source]; track option.id) {
+                    @if (field.key !== 'manager_id' || option.id !== id) {
+                      <mat-option [value]="option.id">{{ option.name }}</mat-option>
+                    }
+                  }
+                </mat-select></mat-form-field
+              >
+            }
+            <mat-form-field appearance="outline" subscriptSizing="dynamic"
+              ><mat-label>Probation ends on</mat-label
+              ><input
+                matInput
+                type="date"
+                name="probation_ends_on"
+                [(ngModel)]="profile.probation_ends_on"
+            /></mat-form-field>
+          </div>
+        </section>
+        <section class="form-section">
+          <h2>03 &nbsp; Contact &amp; emergency details</h2>
+          <p class="muted">Visible to the employee and authorized HR users.</p>
+          <app-employee-contact-fields [model]="profile" />
+        </section>
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Saving employee" />
+        }
+        <div class="form-actions">
+          <a mat-button [routerLink]="id ? ['/employees', id] : ['/employees']" [disabled]="busy()"
+            >Cancel</a
+          ><button mat-flat-button type="submit" [disabled]="busy()">
+            {{ busy() ? 'Saving…' : id ? 'Save employee' : 'Create employee' }}
+          </button>
+        </div>
+      </form>
+      <aside class="panel form-note">
+        <span class="metric-icon"><app-icon name="team" /></span>
+        <h3>A complete employee profile</h3>
+        <p>
+          New employees start as Invited. Open the saved profile to activate employment or create an
+          account invitation.
+        </p>
+        <p>Bank and statutory details have a separate protected section in the saved profile.</p>
+        <p>Status changes retain historical records and require a reason.</p>
+      </aside>
+    </div>
+  }
+</main>

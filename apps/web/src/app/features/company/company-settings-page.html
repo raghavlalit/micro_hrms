@@ -1,0 +1,45 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">WORKSPACE SETTINGS</p>
+      <h1>Company profile</h1>
+      <p class="muted">Manage your company details and regional preferences.</p>
+    </div>
+    @if (slug) {
+      <span class="status">{{ slug }}</span>
+    }
+  </div>
+  @if (message()) {
+    <p class="message" [class.error]="failed()" role="status">{{ message() }}</p>
+  }
+  @if (ready()) {
+    <div class="form-layout">
+      <form class="panel" #settingsForm="ngForm" (ngSubmit)="settingsForm.valid && save()">
+        <section class="form-section">
+          <h2>Company details</h2>
+          <p class="muted">Keep your business and contact information up to date.</p>
+          <app-company-profile-fields [profile]="profile" />
+        </section>
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Saving company settings" />
+        }
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="busy()">
+            {{ busy() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+      <aside class="panel form-note">
+        <span class="metric-icon"><app-icon name="company" /></span>
+        <h3>Your company workspace</h3>
+        <p>
+          Company code<br /><strong>{{ slug }}</strong>
+        </p>
+        <p>Share this code with your company users so they can sign in.</p>
+        <p>Use the sidebar to manage departments, locations and company policies.</p>
+      </aside>
+    </div>
+  } @else if (!failed()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading company profile" />
+  }
+</main>

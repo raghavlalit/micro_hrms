@@ -1,0 +1,55 @@
+<h2 mat-dialog-title>{{ data.manual ? 'Adjust attendance' : 'Request attendance correction' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content>
+    <p class="muted">
+      {{ data.name }} · {{ data.day.work_date }}<br />Enter times in {{ data.day.timezone }}.
+    </p>
+    @if (data.manual) {
+      <mat-form-field appearance="outline"
+        ><mat-label>Adjustment type</mat-label
+        ><mat-select formControlName="mode"
+          ><mat-option value="times">Correct check-in / check-out</mat-option
+          ><mat-option value="absent">Absent</mat-option
+          ><mat-option value="leave">Leave (HR record only)</mat-option
+          ><mat-option value="holiday">Holiday</mat-option
+          ><mat-option value="weekly_off">Weekly off</mat-option></mat-select
+        ></mat-form-field
+      >
+    }
+    @if (!data.manual || form.controls.mode.value === 'times') {
+      <div class="time-fields">
+        <mat-form-field appearance="outline"
+          ><mat-label>Check-in time</mat-label
+          ><input matInput type="time" formControlName="start" /></mat-form-field
+        ><mat-form-field appearance="outline"
+          ><mat-label>Check-out time</mat-label><input matInput type="time" formControlName="end"
+        /></mat-form-field>
+      </div>
+      <p class="muted">
+        Both times must fall on this work date. Hours and status are calculated from the recorded
+        schedule.
+      </p>
+    } @else {
+      <p class="muted">
+        This replaces recorded times with the selected status and zero worked minutes. Marking leave
+        does not change a leave balance.
+      </p>
+    }
+    <mat-form-field appearance="outline"
+      ><mat-label>Reason</mat-label
+      ><textarea matInput formControlName="reason" rows="3" maxlength="500"></textarea
+      ><mat-error>Enter a reason of at least 3 characters.</mat-error></mat-form-field
+    >
+    @if (error()) {
+      <p class="message error" role="alert">{{ error() }}</p>
+    }
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Saving attendance change" />
+    }</mat-dialog-content
+  ><mat-dialog-actions align="end"
+    ><button mat-button type="button" [disabled]="busy()" (click)="dialog.close()">Cancel</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      {{ data.manual ? 'Save adjustment' : 'Submit request' }}
+    </button></mat-dialog-actions
+  >
+</form>

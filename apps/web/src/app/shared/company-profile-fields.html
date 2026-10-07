@@ -1,0 +1,157 @@
+<div class="fields">
+  <div class="span">
+    <mat-form-field appearance="outline"
+      ><mat-label>Company name</mat-label
+      ><input
+        matInput
+        name="company-name"
+        id="company-name"
+        [(ngModel)]="profile().name"
+        required
+        minlength="2"
+        maxlength="150"
+      /><mat-error>Enter a valid company name.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Timezone (IANA)</mat-label
+      ><input
+        matInput
+        name="timezone"
+        id="timezone"
+        [(ngModel)]="profile().timezone"
+        required
+        placeholder="Asia/Kolkata"
+      /><mat-error>Enter a valid timezone (iana).</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Currency</mat-label
+      ><input
+        matInput
+        name="currency"
+        id="currency"
+        [(ngModel)]="profile().currency"
+        required
+        pattern="[A-Z]{3}"
+        maxlength="3"
+      /><mat-error>Enter a valid currency.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Date format</mat-label
+      ><select
+        matNativeControl
+        name="date_format"
+        id="date-format"
+        [(ngModel)]="profile().date_format"
+      >
+        <option>dd/MM/yyyy</option>
+        <option>MM/dd/yyyy</option>
+        <option>yyyy-MM-dd</option>
+      </select></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Contact email</mat-label
+      ><input
+        matInput
+        name="contact-email"
+        id="contact-email"
+        type="email"
+        [(ngModel)]="profile().contact_email"
+        required
+        maxlength="254"
+        email
+      /><mat-error>Enter a valid contact email.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Contact phone</mat-label
+      ><input
+        matInput
+        name="contact-phone"
+        id="contact-phone"
+        [(ngModel)]="profile().contact_phone"
+        maxlength="30"
+      /><mat-error>Enter a valid contact phone.</mat-error></mat-form-field
+    >
+  </div>
+  <div class="span">
+    <mat-form-field appearance="outline"
+      ><mat-label>Address line 1</mat-label
+      ><input
+        matInput
+        name="line1"
+        id="line1"
+        [(ngModel)]="profile().address.line1"
+        maxlength="200"
+      /><mat-error>Enter a valid address line 1.</mat-error></mat-form-field
+    >
+  </div>
+  <div class="span">
+    <mat-form-field appearance="outline"
+      ><mat-label>Address line 2</mat-label
+      ><input
+        matInput
+        name="line2"
+        id="line2"
+        [(ngModel)]="profile().address.line2"
+        maxlength="200"
+      /><mat-error>Enter a valid address line 2.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>City</mat-label
+      ><input
+        matInput
+        name="city"
+        id="city"
+        [(ngModel)]="profile().address.city"
+        maxlength="100"
+      /><mat-error>Enter a valid city.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>State</mat-label
+      ><input
+        matInput
+        name="state"
+        id="state"
+        [(ngModel)]="profile().address.state"
+        maxlength="100"
+      /><mat-error>Enter a valid state.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Postal code</mat-label
+      ><input
+        matInput
+        name="postal"
+        id="postal"
+        [(ngModel)]="profile().address.postal_code"
+        maxlength="20"
+      /><mat-error>Enter a valid postal code.</mat-error></mat-form-field
+    >
+  </div>
+  <div>
+    <mat-form-field appearance="outline"
+      ><mat-label>Country</mat-label
+      ><input
+        matInput
+        name="country"
+        id="country"
+        [(ngModel)]="profile().address.country"
+        maxlength="100"
+      /><mat-error>Enter a valid country.</mat-error></mat-form-field
+    >
+  </div>
+</div>

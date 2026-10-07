@@ -1,0 +1,224 @@
+<main class="page">
+  @if (editorOpen()) {
+    <button mat-button class="back-link" (click)="cancel()" [disabled]="busy()">
+      ← Back to {{ config.title.toLowerCase() }}
+    </button>
+  }
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">COMPANY SETTINGS</p>
+      <h1>{{ editorOpen() ? (editingId ? 'Edit record' : 'Add record') : config.title }}</h1>
+      <p class="muted">{{ config.description }}</p>
+    </div>
+    @if (!editorOpen()) {
+      <button mat-flat-button (click)="add()">
+        <span class="button-content"><app-icon name="plus" />Add record</span>
+      </button>
+    }
+  </div>
+  @if (message()) {
+    <p class="message" [class.error]="failed()" role="status">{{ message() }}</p>
+  }
+  @if (editorOpen()) {
+    <div class="form-layout">
+      <form #recordForm="ngForm" class="panel" (ngSubmit)="recordForm.valid && save()">
+        <section class="form-section">
+          <h2>{{ config.title }}</h2>
+          <p class="muted">
+            Complete the details below. Required fields are marked with an asterisk.
+          </p>
+          <div class="fields">
+            @for (field of config.fields; track field.key) {
+              @if (field.type === 'checkbox') {
+                <div class="check-field span">
+                  <mat-checkbox
+                    [name]="field.key"
+                    [ngModel]="value(field)"
+                    (ngModelChange)="setValue(field, $event)"
+                    >{{ field.label }}</mat-checkbox
+                  >
+                </div>
+              } @else if (field.type === 'weekdays') {
+                <div class="span check-field">
+                  <p class="muted">Working days</p>
+                  <div class="weekdays">
+                    @for (day of days; track day; let index = $index) {
+                      <mat-checkbox [checked]="isDay(index)" (change)="toggleDay(index)">{{
+                        day
+                      }}</mat-checkbox>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <mat-form-field appearance="outline"
+                  ><mat-label>{{ field.label }}</mat-label>
+                  @if (field.type === 'select') {
+                    <mat-select
+                      [id]="field.key"
+                      [name]="field.key"
+                      [ngModel]="value(field)"
+                      (ngModelChange)="setValue(field, $event)"
+                      [required]="!!field.required"
+                    >
+                      @if (!field.required) {
+                        <mat-option [value]="null">All locations / none</mat-option>
+                      }
+                      @for (option of options(field); track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                      }
+                    </mat-select>
+                  } @else {
+                    <input
+                      matInput
+                      [id]="field.key"
+                      [name]="field.key"
+                      [type]="field.type"
+                      [ngModel]="value(field)"
+                      (ngModelChange)="setValue(field, $event)"
+                      [required]="!!field.required"
+                      [min]="field.min ?? null"
+                      [max]="field.max ?? null"
+                      [step]="field.step ?? 'any'"
+                    />
+                  }
+                  @if (field.hint) {
+                    <mat-hint>{{ field.hint }}</mat-hint>
+                  }
+                  <mat-error
+                    >Enter a valid {{ field.label.toLowerCase() }}.</mat-error
+                  ></mat-form-field
+                >
+              }
+            }
+          </div>
+        </section>
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Saving record" />
+        }
+        <div class="form-actions">
+          <button mat-button type="button" (click)="cancel()" [disabled]="busy()">Cancel</button
+          ><button mat-flat-button type="submit" [disabled]="busy()">
+            {{ busy() ? 'Saving…' : 'Save record' }}
+          </button>
+        </div>
+      </form>
+      <aside class="panel form-note">
+        <span class="metric-icon"><app-icon name="settings" /></span>
+        <h3>Configured for your company</h3>
+        <p>
+          These settings belong to your company. Updating them does not change another company's
+          records.
+        </p>
+      </aside>
+    </div>
+  } @else {
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>
+            {{ config.title }} <span class="count">{{ records().length }}</span>
+          </h2>
+          <p class="muted">Manage and maintain your company's records.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic"
+          ><mat-label>Search records</mat-label
+          ><input
+            matInput
+            [(ngModel)]="search"
+            (ngModelChange)="filterChanged()"
+            placeholder="Name, code or date"
+        /></mat-form-field>
+        @if (hasStatus()) {
+          <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic"
+            ><mat-label>Status</mat-label
+            ><mat-select [(ngModel)]="statusFilter" (ngModelChange)="filterChanged()"
+              ><mat-option value="all">All statuses</mat-option
+              ><mat-option value="active">Active</mat-option
+              ><mat-option value="inactive">Inactive</mat-option></mat-select
+            ></mat-form-field
+          >
+        }
+        <span class="toolbar-note muted">{{ filteredRecords().length }} records</span
+        ><button mat-button (click)="load()" [disabled]="loading()">Refresh</button>
+      </div>
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading records" />
+      }
+      @if (visibleRecords().length) {
+        <div class="table-wrap">
+          <table class="data-table" [attr.aria-label]="config.title">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Code / date</th>
+                @if (hasStatus()) {
+                  <th scope="col">Status</th>
+                }
+                <th scope="col" class="action-cell">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of visibleRecords(); track row['id']) {
+                <tr>
+                  <td>
+                    <span class="record-name">{{ row['name'] }}</span>
+                  </td>
+                  <td>{{ row['code'] ?? row['holiday_date'] ?? row['effective_from'] ?? '—' }}</td>
+                  @if (hasStatus()) {
+                    <td>
+                      <span class="status" [class.inactive]="row['is_active'] === false">{{
+                        row['is_active'] === false ? 'Inactive' : 'Active'
+                      }}</span>
+                    </td>
+                  }
+                  <td class="action-cell">
+                    <button
+                      mat-button
+                      (click)="edit(row)"
+                      [attr.aria-label]="'Edit ' + row['name']"
+                    >
+                      Edit record
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (!loading()) {
+        <div class="empty-state">
+          <app-icon name="document" />
+          <h2>
+            {{
+              failed()
+                ? 'Records unavailable'
+                : records().length
+                  ? 'No matching records'
+                  : 'No records yet'
+            }}
+          </h2>
+          <p>
+            {{
+              failed()
+                ? 'Refresh to try again.'
+                : records().length
+                  ? 'Try another search or status filter.'
+                  : 'Add the first record for your company.'
+            }}
+          </p>
+        </div>
+      }
+      <mat-paginator
+        [length]="filteredRecords().length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 25, 50]"
+        (page)="changePage($event)"
+        showFirstLastButtons
+        aria-label="Record pages"
+      />
+    </section>
+  }
+</main>

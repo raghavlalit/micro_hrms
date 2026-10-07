@@ -1,0 +1,59 @@
+<form #statusForm="ngForm" (ngSubmit)="statusForm.valid && submit()">
+  <h2 mat-dialog-title>Change employee status</h2>
+  <mat-dialog-content
+    ><p class="muted">
+      Changes take effect immediately. Inactive and terminated employees lose login access; their
+      history is retained.
+    </p>
+    <div class="dialog-form">
+      <mat-form-field appearance="outline"
+        ><mat-label>New status</mat-label
+        ><mat-select name="status" [(ngModel)]="status" required>
+          @for (item of statuses; track item) {
+            <mat-option [value]="item">{{ item.replace('_', ' ') }}</mat-option>
+          }
+        </mat-select></mat-form-field
+      >
+      @if (status === 'on_notice') {
+        <mat-form-field appearance="outline"
+          ><mat-label>Notice date</mat-label
+          ><input
+            matInput
+            name="notice_date"
+            type="date"
+            [(ngModel)]="notice_date"
+            required
+          /><mat-error>Enter the notice date.</mat-error></mat-form-field
+        >
+      }
+      @if (status === 'terminated') {
+        <mat-form-field appearance="outline"
+          ><mat-label>Termination date</mat-label
+          ><input
+            matInput
+            name="termination_date"
+            type="date"
+            [(ngModel)]="termination_date"
+            required
+          /><mat-error>Enter the termination date.</mat-error></mat-form-field
+        >
+      }
+      <mat-form-field appearance="outline"
+        ><mat-label>Reason for change</mat-label
+        ><textarea
+          matInput
+          name="reason"
+          [(ngModel)]="reason"
+          required
+          minlength="3"
+          maxlength="500"
+          rows="3"
+        ></textarea
+        ><mat-error>A reason of at least 3 characters is required.</mat-error></mat-form-field
+      >
+    </div></mat-dialog-content
+  ><mat-dialog-actions align="end"
+    ><button mat-button type="button" (click)="dialog.close()">Cancel</button
+    ><button mat-flat-button type="submit">Update status</button></mat-dialog-actions
+  >
+</form>

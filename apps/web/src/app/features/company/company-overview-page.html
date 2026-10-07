@@ -1,0 +1,48 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">YOUR WORKSPACE</p>
+      <h1>Welcome to Micro HRMS</h1>
+      <p class="muted">Build the foundation for your company's people operations.</p>
+    </div>
+  </div>
+  <section class="welcome panel">
+    <div>
+      <span class="eyebrow">GET STARTED</span>
+      <h2>A workspace that works<br />the way your company does.</h2>
+      <p>
+        Review your company details and personalize the settings below<br />before you begin
+        managing your team.
+      </p>
+    </div>
+    <div class="welcome-symbol"><app-icon name="company" /></div>
+  </section>
+  <div class="page-heading">
+    <div>
+      <h2 class="section-title">Workspace setup</h2>
+      <p class="muted">Your available tools, based on your account permissions.</p>
+    </div>
+  </div>
+  <div class="setup-grid">
+    @for (card of cards; track card.path) {
+      @if (can(card.permission)) {
+        <a class="setup-card panel" [routerLink]="card.path"
+          ><span class="metric-icon"><app-icon [name]="card.icon" /></span>
+          <h3>{{ card.title }}</h3>
+          <p>{{ card.description }}</p>
+          <span class="open">Open settings <app-icon name="arrow" /></span
+        ></a>
+      }
+    }
+  </div>
+  @if (!hasSettings()) {
+    <section class="panel empty-state">
+      <app-icon name="shield" />
+      <h2>Your account is ready</h2>
+      <p>
+        Your administrator manages company settings. More workspace tools will appear as they become
+        available.
+      </p>
+    </section>
+  }
+</main>

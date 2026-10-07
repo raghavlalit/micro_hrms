@@ -1,0 +1,34 @@
+{
+  "name": "micro-hrms",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "attendance:test": "npm run build:api && node apps/api/test/attendance.integration.cjs",
+    "holidays:test": "npm run build:api && node apps/api/test/holidays.integration.cjs",
+    "postman:generate": "node scripts/generate-postman.cjs",
+    "postman:check": "npm run build:api && node scripts/check-postman.cjs",
+    "access:test": "npm run build:api && node apps/api/test/access.integration.cjs",
+    "employees:test": "npm run build:api && node apps/api/test/employees.integration.cjs",
+    "employees:key:setup": "node scripts/setup-employee-encryption.cjs",
+    "onboarding:test": "npm run build:api && node apps/api/test/onboarding.integration.cjs",
+    "admin:provision": "npm run build:api && node apps/api/dist/modules/platform/commands/provision-platform-admin.js",
+    "auth:test": "npm run build:api && node apps/api/test/auth.integration.cjs",
+    "dev:web": "npm run start --workspace=apps/web",
+    "dev:api": "npm run start:dev --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "build": "npm run build:api && npm run build:web",
+    "db:setup": "node scripts/setup-database-env.cjs",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:stop": "docker compose stop postgres",
+    "db:logs": "docker compose logs postgres",
+    "db:migrate": "npm run build:api && npm run migration:run --workspace=apps/api",
+    "db:status": "npm run build:api && npm run migration:show --workspace=apps/api",
+    "db:revert": "npm run build:api && npm run migration:revert --workspace=apps/api",
+    "db:test": "npm run build:api && node apps/api/test/database.integration.cjs",
+    "db:smoke": "npm run build:api && node apps/api/test/database-startup.cjs"
+  }
+}

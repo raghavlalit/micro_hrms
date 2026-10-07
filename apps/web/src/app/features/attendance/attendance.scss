@@ -1,0 +1,120 @@
+.attendance-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-bottom: 22px;
+}
+.attendance-filters mat-form-field {
+  width: 230px;
+}
+.attendance-filters mat-form-field:first-child {
+  min-width: 180px;
+}
+.people-search {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.today-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  margin-bottom: 22px;
+}
+.today-panel h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.today-panel p {
+  margin: 8px 0 0;
+}
+.clock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.clock-actions strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+}
+.clock-actions > div {
+  min-width: 70px;
+}
+.attendance-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.attendance-summary > div {
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 10px;
+}
+.attendance-summary strong {
+  display: block;
+  font-size: 26px;
+  margin-top: 8px;
+}
+.current-day {
+  background: #eef7f2;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+.request-reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.time-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+mat-dialog-content > mat-form-field {
+  margin-top: 8px;
+}
+@media (max-width: 1100px) {
+  .today-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .attendance-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .attendance-filters mat-form-field,
+  .people-search {
+    width: 100%;
+  }
+  .attendance-summary {
+    gap: 10px;
+  }
+  .attendance-summary > div {
+    padding: 16px;
+  }
+  .time-fields {
+    grid-template-columns: 1fr;
+  }
+  .clock-actions {
+    gap: 10px;
+  }
+  .today-panel {
+    padding: 18px;
+  }
+}

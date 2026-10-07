@@ -1,0 +1,108 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">TIME &amp; ATTENDANCE</p>
+      <h1>Corrections &amp; approvals</h1>
+      <p class="muted">Review requested changes and follow their status.</p>
+    </div>
+    <a mat-stroked-button routerLink="/attendance">Back to attendance</a>
+  </div>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="message" role="status">{{ success() }}</p>
+  }
+  <section class="panel">
+    <form class="attendance-filters" (ngSubmit)="apply()">
+      @if (canSelf && canReview) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"
+          ><mat-label>Request scope</mat-label
+          ><mat-select name="scope" [(ngModel)]="scope" [disabled]="loading()"
+            ><mat-option value="review">Team / company requests</mat-option
+            ><mat-option value="mine">My requests</mat-option></mat-select
+          ></mat-form-field
+        >
+      }
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Status</mat-label
+        ><mat-select name="status" [(ngModel)]="status" [disabled]="loading()"
+          ><mat-option value="">All statuses</mat-option
+          ><mat-option value="pending">Pending</mat-option
+          ><mat-option value="approved">Approved</mat-option
+          ><mat-option value="rejected">Rejected</mat-option></mat-select
+        ></mat-form-field
+      ><button mat-flat-button type="submit" [disabled]="loading()">Apply filters</button>
+    </form>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading correction requests" />
+    }
+    @if (items().length) {
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Attendance corrections">
+          <thead>
+            <tr>
+              <th scope="col">Employee / date</th>
+              <th scope="col">Requested times</th>
+              <th scope="col">Reason</th>
+              <th scope="col">Status / comment</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of items(); track row.id) {
+              <tr>
+                <td>
+                  <span class="record-name">{{ row.employee_name }}</span
+                  ><span class="record-code">{{ row.employee_code }} · {{ row.work_date }}</span>
+                </td>
+                <td class="nowrap">
+                  {{ time(row.check_in, row.timezone) }}–{{ time(row.check_out, row.timezone) }}
+                  <div class="record-code">{{ row.timezone }}</div>
+                </td>
+                <td class="request-reason">{{ row.reason }}</td>
+                <td>
+                  <span
+                    class="status"
+                    [class.trial]="row.status === 'pending'"
+                    [class.inactive]="row.status === 'rejected'"
+                    >{{ row.status }}</span
+                  >
+                  <p class="record-code request-reason">{{ row.review_comment }}</p>
+                </td>
+                <td>
+                  @if (scope === 'review' && row.status === 'pending') {
+                    <button
+                      mat-button
+                      [disabled]="loading()"
+                      (click)="review(row)"
+                      [attr.aria-label]="
+                        'Review correction for ' + row.employee_name + ' on ' + row.work_date
+                      "
+                    >
+                      Review
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!loading()) {
+      <div class="empty-state">
+        <h2>No correction requests</h2>
+        <p>Requests matching your scope and status will appear here.</p>
+      </div>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page"
+      [pageSize]="20"
+      [disabled]="loading()"
+      (page)="paginate($event)"
+      showFirstLastButtons
+      aria-label="Correction pages"
+    />
+  </section>
+</main>

@@ -1,0 +1,19 @@
+<h2 mat-dialog-title>{{data.balanceId ? 'Adjust leave balance' : 'Assign annual entitlement'}}</h2>
+<form #form="ngForm" (ngSubmit)="save(form)">
+<mat-dialog-content><p>{{data.name}} · {{data.year}} (January–December)</p>
+@if(error()) {<p class="message error" role="alert">{{error()}}</p>}
+<div class="leave-form">
+@if(data.balanceId) {
+<p>Enter a positive credit or negative deduction. Available balance cannot become negative.</p>
+<mat-form-field appearance="outline"><mat-label>Adjustment (days)</mat-label><input matInput type="number" name="units" [(ngModel)]="units" min="-366" max="366" step="0.01" required></mat-form-field>
+} @else {
+<p>Credit the reviewed annual amount. No automatic proration or monthly accrual is applied.</p>
+<mat-form-field appearance="outline"><mat-label>Policy</mat-label><mat-select name="policy" [(ngModel)]="policyId" (selectionChange)="choosePolicy()" required>@for(policy of policies();track policy.id) {<mat-option [value]="policy.id">{{policy.name}}</mat-option>}</mat-select></mat-form-field>
+<mat-form-field appearance="outline"><mat-label>Annual credit (days)</mat-label><input matInput type="number" name="credited" [(ngModel)]="credited" min="0" max="366" step="0.01" required></mat-form-field>
+<mat-form-field appearance="outline"><mat-label>Carry forward from previous year</mat-label><input matInput type="number" name="carry" [(ngModel)]="carry" min="0" max="366" step="0.01" required></mat-form-field>
+<p class="muted">Carry-forward requires an enabled policy, sufficient previous-year balance and no pending requests. The amount is transferred out of the previous year.</p>
+}
+<mat-form-field appearance="outline"><mat-label>Reason</mat-label><textarea matInput name="reason" [(ngModel)]="reason" rows="3" required minlength="3" maxlength="500"></textarea></mat-form-field>
+</div></mat-dialog-content>
+<mat-dialog-actions align="end"><button mat-button type="button" mat-dialog-close [disabled]="busy()">Close</button><button mat-flat-button type="submit" [disabled]="busy()">Save</button></mat-dialog-actions>
+</form>

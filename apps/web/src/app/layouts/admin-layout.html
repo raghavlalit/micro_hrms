@@ -1,0 +1,91 @@
+<a class="skip-link" href="#workspace-content">Skip to content</a>
+<mat-sidenav-container autosize class="shell" [class.compact]="collapsed() && !mobile()">
+  <mat-sidenav
+    [mode]="mobile() ? 'over' : 'side'"
+    [opened]="mobile() ? mobileOpen() : true"
+    (closedStart)="mobileOpen.set(false)"
+    class="sidebar"
+  >
+    <a
+      class="brand"
+      [routerLink]="
+        session.user()?.kind === 'platform' ? '/platform/companies' : '/company/overview'
+      "
+      aria-label="Micro HRMS home"
+      ><span class="brand-mark">m<span>.</span></span
+      ><span class="brand-copy">Micro<span>HRMS WORKSPACE</span></span></a
+    >
+    <div class="workspace-label">
+      <span class="workspace-dot"></span
+      ><span class="nav-copy">{{
+        session.user()?.kind === 'platform' ? 'Platform administration' : 'Company workspace'
+      }}</span>
+    </div>
+    <nav aria-label="Main navigation" (click)="mobileOpen.set(false)">
+      @if (session.user()?.kind === 'platform') {
+        <p class="section-label">PLATFORM</p>
+        <a
+          routerLink="/platform/companies"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          title="Companies"
+          ><app-icon name="company" /><span class="nav-copy">Companies</span></a
+        >
+      } @else {
+        @for (section of visibleSections(); track section.label) {
+          <p class="section-label">{{ section.label }}</p>
+          @for (item of section.items; track item.path) {
+            <a
+              [routerLink]="item.path"
+              [class.active]="isActive(item.path)"
+              [attr.aria-current]="isActive(item.path) ? 'page' : null"
+              [title]="item.label"
+              ><app-icon [name]="item.icon" /><span class="nav-copy">{{ item.label }}</span></a
+            >
+          }
+        }
+      }
+    </nav>
+    <div class="sidebar-footer">
+      <app-icon name="shield" /><span class="nav-copy">Your people. Your workspace.</span>
+    </div>
+  </mat-sidenav>
+  <mat-sidenav-content #content>
+    <header class="topbar">
+      <button
+        mat-icon-button
+        (click)="toggle()"
+        aria-label="Toggle navigation"
+        [attr.aria-expanded]="mobile() ? mobileOpen() : !collapsed()"
+      >
+        <app-icon name="menu" />
+      </button>
+      <div class="breadcrumb">
+        <span>{{ session.user()?.kind === 'platform' ? 'Platform' : 'Workspace' }}</span
+        ><span>/</span><strong>{{ title() }}</strong>
+      </div>
+      <button
+        mat-button
+        [matMenuTriggerFor]="accountMenu"
+        class="account-button"
+        aria-label="Open account menu"
+      >
+        <span class="avatar">{{ session.user()?.email?.charAt(0)?.toUpperCase() }}</span
+        ><span class="account-email">{{ session.user()?.email }}</span
+        ><span aria-hidden="true">⌄</span>
+      </button>
+      <mat-menu #accountMenu="matMenu"
+        ><a mat-menu-item routerLink="/login">Password &amp; sessions</a
+        ><button mat-menu-item (click)="logout()" [disabled]="signingOut()">
+          Sign out
+        </button></mat-menu
+      >
+    </header>
+    @if (error()) {
+      <p class="shell-error" role="alert">{{ error() }}</p>
+    }
+    <div id="workspace-content" tabindex="-1">
+      <router-outlet (activate)="content.scrollTo({ top: 0 })" />
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

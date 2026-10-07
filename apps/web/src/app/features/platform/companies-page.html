@@ -1,0 +1,267 @@
+<main class="page">
+  @if (creating()) {
+    <button mat-button class="back-link" (click)="creating.set(false)" [disabled]="busy()">
+      ← Back to companies
+    </button>
+  }
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">PLATFORM ADMINISTRATION</p>
+      <h1>{{ creating() ? 'Create a company' : 'Companies' }}</h1>
+      <p class="muted">
+        {{
+          creating()
+            ? 'Set up a workspace and invite its first administrator.'
+            : 'Manage company workspaces and administrator invitations.'
+        }}
+      </p>
+    </div>
+    @if (!creating()) {
+      <button mat-flat-button (click)="startCreate()">
+        <span class="button-content"><app-icon name="plus" />Add company</span>
+      </button>
+    }
+  </div>
+  @if (message()) {
+    <p class="message" [class.error]="failed()" role="status">{{ message() }}</p>
+  }
+  @if (invitationLink()) {
+    <section class="panel invitation-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Administrator invitation is ready</h2>
+          <p class="muted">
+            Share this link securely. No email has been sent. Expires {{ invitationExpiry() }}.
+          </p>
+        </div>
+        <app-icon name="check" />
+      </div>
+      <div class="panel-body">
+        <mat-form-field appearance="outline"
+          ><mat-label>One-time activation link</mat-label
+          ><input
+            matInput
+            id="activation-link"
+            [value]="invitationLink()"
+            readonly
+            (click)="$any($event.target).select()" /></mat-form-field
+        ><button mat-button (click)="invitationLink.set('')">Hide link</button>
+      </div>
+    </section>
+  }
+  @if (creating()) {
+    <div class="form-layout">
+      <form class="panel" #companyForm="ngForm" (ngSubmit)="companyForm.valid && create()">
+        <section class="form-section">
+          <h2>01 &nbsp; Company profile</h2>
+          <p class="muted">Basic details, regional preferences and contact information.</p>
+          <app-company-profile-fields [profile]="profile" />
+        </section>
+        <section class="form-section">
+          <h2>02 &nbsp; Workspace &amp; administrator</h2>
+          <p class="muted">The administrator will use an invitation to set their own password.</p>
+          <div class="fields">
+            <mat-form-field appearance="outline" class="span"
+              ><mat-label>Unique company code</mat-label
+              ><input
+                matInput
+                id="company-code"
+                name="slug"
+                [(ngModel)]="slug"
+                required
+                minlength="2"
+                maxlength="100"
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                placeholder="acme-company"
+              /><mat-hint
+                >Used by company users when signing in. Lowercase letters, numbers and
+                hyphens.</mat-hint
+              ><mat-error
+                >Enter a valid company code with at least 2 characters.</mat-error
+              ></mat-form-field
+            >
+            <mat-form-field appearance="outline"
+              ><mat-label>Administrator name</mat-label
+              ><input
+                matInput
+                id="admin-name"
+                name="admin_name"
+                [(ngModel)]="admin_name"
+                required
+                minlength="2"
+                maxlength="100"
+              /><mat-error>Enter the administrator's name.</mat-error></mat-form-field
+            >
+            <mat-form-field appearance="outline"
+              ><mat-label>Administrator email</mat-label
+              ><input
+                matInput
+                id="admin-email"
+                name="admin_email"
+                type="email"
+                email
+                [(ngModel)]="admin_email"
+                required
+                maxlength="254"
+              /><mat-error>Enter a valid email address.</mat-error></mat-form-field
+            >
+          </div>
+        </section>
+        @if (busy()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Creating company" />
+        }
+        <div class="form-actions">
+          <button mat-button type="button" (click)="creating.set(false)" [disabled]="busy()">
+            Cancel</button
+          ><button mat-flat-button type="submit" [disabled]="busy()">
+            {{ busy() ? 'Creating workspace…' : 'Create company & invite admin' }}
+          </button>
+        </div>
+      </form>
+      <aside class="panel form-note">
+        <span class="metric-icon"><app-icon name="company" /></span>
+        <h3>Your new company workspace</h3>
+        <p>Each company has its own data and settings.</p>
+        <ul>
+          <li>Starts on the Trial plan.</li>
+          <li>Includes default master data.</li>
+          <li>Policies can be customized by its administrator.</li>
+          <li>Leave policies and holidays start empty.</li>
+        </ul>
+        <p>You will receive a one-time administrator activation link after creation.</p>
+      </aside>
+    </div>
+  } @else {
+    <div class="metric-grid">
+      <section class="panel metric">
+        <span class="metric-icon"><app-icon name="company" /></span>
+        <div>
+          <p>{{ search ? 'Matching companies' : 'Total companies' }}</p>
+          <strong>{{ loading() ? '—' : total }}</strong>
+        </div>
+      </section>
+      <section class="panel metric">
+        <span class="metric-icon"><app-icon name="shield" /></span>
+        <div>
+          <p>Administration</p>
+          <strong>Platform</strong>
+        </div>
+      </section>
+      <section class="panel metric">
+        <span class="metric-icon"><app-icon name="team" /></span>
+        <div>
+          <p>Onboarding</p>
+          <strong>By invitation</strong>
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>
+            Company directory <span class="count">{{ total }}</span>
+          </h2>
+          <p class="muted">All workspaces in one place.</p>
+        </div>
+      </div>
+      <form class="toolbar" (ngSubmit)="page = 1; load()">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search"
+          ><mat-label>Search companies</mat-label
+          ><input
+            matInput
+            name="search"
+            [(ngModel)]="search"
+            placeholder="Name or company code"
+            [disabled]="loading()" /></mat-form-field
+        ><button mat-stroked-button type="submit" [disabled]="loading()">Search</button>
+        @if (search) {
+          <button
+            mat-button
+            type="button"
+            (click)="search = ''; page = 1; load()"
+            [disabled]="loading()"
+          >
+            Clear
+          </button>
+        }
+        <span class="muted toolbar-note">20 companies per page</span>
+      </form>
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Loading companies" />
+      }
+      @if (companies().length) {
+        <div class="table-wrap">
+          <table class="data-table" aria-label="Company directory">
+            <thead>
+              <tr>
+                @for (column of columns; track column) {
+                  <th scope="col">{{ column }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (company of companies(); track company.id) {
+                <tr>
+                  <td>
+                    <span class="record-name">{{ company.name }}</span
+                    ><span class="record-code">{{ company.slug }}</span>
+                  </td>
+                  <td>{{ company.admin_email }}</td>
+                  <td>
+                    <span
+                      class="status"
+                      [class.trial]="company.status === 'trial'"
+                      [class.inactive]="
+                        company.status === 'suspended' || company.status === 'inactive'
+                      "
+                      >{{ company.status }}</span
+                    >
+                  </td>
+                  <td class="action-cell">
+                    <button mat-button (click)="reissue(company)" [disabled]="busy()">
+                      Replace pending link
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (!loading()) {
+        <div class="empty-state">
+          <app-icon name="company" />
+          <h2>
+            {{
+              failed()
+                ? 'Directory unavailable'
+                : search
+                  ? 'No matching companies'
+                  : 'Your first company starts here'
+            }}
+          </h2>
+          <p>
+            {{
+              failed()
+                ? 'Try loading the directory again.'
+                : search
+                  ? 'Try another company name or code.'
+                  : 'Create a workspace to begin setting up a company.'
+            }}
+          </p>
+          @if (!search && !failed()) {
+            <button mat-stroked-button (click)="startCreate()">Add your first company</button>
+          }
+        </div>
+      }
+      <mat-paginator
+        [length]="total"
+        [pageSize]="20"
+        [pageIndex]="page - 1"
+        [disabled]="loading()"
+        (page)="changePage($event)"
+        showFirstLastButtons
+        aria-label="Company directory pages"
+      />
+    </section>
+  }
+</main>

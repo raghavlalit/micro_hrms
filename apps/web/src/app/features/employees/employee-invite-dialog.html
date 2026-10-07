@@ -1,0 +1,27 @@
+<h2 mat-dialog-title>{{ employee.user_id ? 'Replace pending invitation?' : 'Invite employee' }}</h2>
+<mat-dialog-content
+  ><p class="muted">
+    Create a one-time activation link for {{ employee.email }}. You will need to share the link
+    securely; no email is sent automatically.
+  </p>
+  @if (employee.user_id) {
+    <p class="muted">
+      The previous link will stop working. Existing account permissions stay the same.
+    </p>
+  } @else {
+    <mat-form-field appearance="outline"
+      ><mat-label>Account role</mat-label
+      ><mat-select [(ngModel)]="role"
+        ><mat-option value="employee">Employee — own profile</mat-option
+        ><mat-option value="manager"
+          >Manager — own profile and direct reports</mat-option
+        ></mat-select
+      ></mat-form-field
+    >
+  }</mat-dialog-content
+><mat-dialog-actions align="end"
+  ><button mat-button (click)="dialog.close()">Cancel</button
+  ><button mat-flat-button (click)="dialog.close(role)">
+    {{ employee.user_id ? 'Replace link' : 'Create invitation' }}
+  </button></mat-dialog-actions
+>

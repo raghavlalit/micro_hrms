@@ -1,0 +1,236 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">TIME &amp; ATTENDANCE</p>
+      <h1>Attendance</h1>
+      <p class="muted">Record your workday and review monthly attendance.</p>
+    </div>
+    <a mat-stroked-button routerLink="/attendance/requests">Corrections &amp; approvals</a>
+  </div>
+  @if (error()) {
+    <p class="message error" role="alert">
+      {{ error() }} <button mat-button (click)="load()" [disabled]="loading()">Retry</button>
+    </p>
+  }
+  @if (success()) {
+    <p class="message" role="status">{{ success() }}</p>
+  }
+  <section class="panel attendance-filters">
+    @if (selfAllowed() && teamAllowed()) {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>View</mat-label
+        ><mat-select [(ngModel)]="mode" [disabled]="loading()" (selectionChange)="switchMode()"
+          ><mat-option value="self">My attendance</mat-option
+          ><mat-option value="team">Team / company</mat-option></mat-select
+        ></mat-form-field
+      >
+    }
+    @if (mode === 'team') {
+      <div class="people-search">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic"
+          ><mat-label>Find employee</mat-label
+          ><input
+            matInput
+            [(ngModel)]="search"
+            maxlength="100"
+            (keyup.enter)="searchPeople()" /></mat-form-field
+        ><button mat-button [disabled]="peopleBusy() || loading()" (click)="searchPeople()">
+          Search
+        </button>
+      </div>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"
+        ><mat-label>Employee</mat-label
+        ><mat-select
+          [(ngModel)]="employeeId"
+          [disabled]="loading() || peopleBusy()"
+          (selectionChange)="load()"
+        >
+          @for (person of people(); track person.id) {
+            <mat-option [value]="person.id"
+              >{{ person.name }} · {{ person.employee_code }}</mat-option
+            >
+          }
+        </mat-select></mat-form-field
+      >
+      @if (peopleTotal > 50) {
+        <div>
+          <button mat-button [disabled]="peoplePage === 1 || peopleBusy()" (click)="peopleStep(-1)">
+            Previous employees</button
+          ><span class="muted">Page {{ peoplePage }}</span
+          ><button
+            mat-button
+            [disabled]="peoplePage * 50 >= peopleTotal || peopleBusy()"
+            (click)="peopleStep(1)"
+          >
+            Next employees
+          </button>
+        </div>
+      }
+    }
+    <mat-form-field appearance="outline" subscriptSizing="dynamic"
+      ><mat-label>Month</mat-label
+      ><input
+        matInput
+        type="month"
+        [(ngModel)]="month"
+        min="1900-01"
+        max="2200-12" /></mat-form-field
+    ><button mat-flat-button [disabled]="loading()" (click)="load()">Load month</button>
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading attendance" />
+  }
+  @if (data(); as calendar) {
+    <section class="panel today-panel">
+      <div>
+        <h2>
+          {{ calendar.employee.name }}
+          <span class="count">{{ calendar.employee.employee_code }}</span>
+        </h2>
+        <p class="muted">
+          Today: {{ calendar.today | date: 'mediumDate' : 'UTC' }} · {{ calendar.timezone }}
+        </p>
+        <p class="muted">
+          {{ calendar.schedule.name || 'No unambiguous work schedule assigned' }}
+          @if (calendar.schedule.configured) {
+            · {{ calendar.schedule.start_time.slice(0, 5) }}–{{
+              calendar.schedule.end_time.slice(0, 5)
+            }}
+            · {{ calendar.schedule.late_grace_minutes }} minute grace
+          }
+        </p>
+        @if (!calendar.schedule.configured) {
+          <p class="muted">
+            Ask HR to assign a work schedule before checking in or requesting time corrections.
+          </p>
+        }
+      </div>
+      @if (mode === 'self') {
+        <div class="clock-actions">
+          <div>
+            <span class="muted">Check-in</span
+            ><strong>{{ time(calendar.actions.checked_in_at, calendar.timezone) }}</strong>
+          </div>
+          <div>
+            <span class="muted">Check-out</span
+            ><strong>{{ time(calendar.actions.checked_out_at, calendar.timezone) }}</strong>
+          </div>
+          <button
+            mat-flat-button
+            [disabled]="loading() || !calendar.actions.can_check_in"
+            (click)="check(false)"
+          >
+            Check in</button
+          ><button
+            mat-stroked-button
+            [disabled]="loading() || !calendar.actions.can_check_out"
+            (click)="check(true)"
+          >
+            Check out
+          </button>
+        </div>
+      }
+    </section>
+    <div class="attendance-summary">
+      <div>
+        <span class="muted">Recorded hours</span
+        ><strong>{{ hours(calendar.summary.worked_minutes) }}</strong>
+      </div>
+      <div>
+        <span class="muted">Late arrivals</span><strong>{{ calendar.summary.late_days }}</strong>
+      </div>
+      <div>
+        <span class="muted">Absent days</span><strong>{{ calendar.summary.absent_days }}</strong>
+      </div>
+      <div>
+        <span class="muted">Missing checkouts</span
+        ><strong>{{ calendar.summary.incomplete_days }}</strong>
+      </div>
+    </div>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Monthly record · {{ calendar.month }}</h2>
+          <p class="muted">
+            Unrecorded days show the current calendar rules. Saved days keep their recorded rules.
+          </p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Monthly attendance">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Status</th>
+              <th scope="col">Check-in / out</th>
+              <th scope="col">Worked</th>
+              <th scope="col">Late</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (day of calendar.items; track day.work_date) {
+              <tr [class.current-day]="day.work_date === calendar.today">
+                <td class="nowrap">
+                  {{ day.work_date | date: 'EEE, d MMM' : 'UTC' }}
+                  @if (day.work_date === calendar.today) {
+                    <span class="count">Today</span>
+                  }
+                </td>
+                <td>
+                  <span
+                    class="status"
+                    [class.inactive]="day.status === 'absent' || day.status === 'not_applicable'"
+                    [class.trial]="day.status === 'pending' || day.status === 'incomplete'"
+                    >{{ day.status.replace('_', ' ') }}</span
+                  >
+                  @if (day.projected && !day.future) {
+                    <div class="record-code">Calendar estimate</div>
+                  }
+                  @if (day.future) {
+                    <div class="record-code">Future date</div>
+                  }
+                </td>
+                <td>
+                  {{ time(day.check_in, day.timezone) }} / {{ time(day.check_out, day.timezone) }}
+                  <div class="record-code">{{ day.timezone }}</div>
+                </td>
+                <td class="nowrap">{{ hours(day.worked_minutes) }}</td>
+                <td>{{ day.late_minutes ? day.late_minutes + ' min' : '—' }}</td>
+                <td>
+                  <div class="row-actions">
+                    @if (day.can_request) {
+                      <button
+                        mat-button
+                        [disabled]="loading()"
+                        (click)="edit(day, false)"
+                        [attr.aria-label]="'Request correction for ' + day.work_date"
+                      >
+                        Correct
+                      </button>
+                    }
+                    @if (day.can_adjust) {
+                      <button
+                        mat-button
+                        [disabled]="loading()"
+                        (click)="edit(day, true)"
+                        [attr.aria-label]="'Adjust ' + day.work_date"
+                      >
+                        Adjust
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @else if (!loading() && !error()) {
+    <div class="empty-state">
+      <h2>Select an employee</h2>
+      <p>Choose an employee from your permitted team or company to review attendance.</p>
+    </div>
+  }
+</main>

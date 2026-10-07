@@ -1,0 +1,53 @@
+<app-auth-layout
+  ><p class="eyebrow">WELCOME TO YOUR COMPANY</p>
+  <h1>Activate your company account</h1>
+  <p>
+    Set your own password, then sign in with the company code and email provided by your
+    administrator.
+  </p>
+  @if (done()) {
+    <p class="message">Account activated successfully.</p>
+    <a mat-flat-button routerLink="/login">Go to sign in</a>
+  } @else if (!token) {
+    <p class="message">
+      The activation link is missing. Ask your platform administrator for a new link.
+    </p>
+  } @else {
+    <form #activationForm="ngForm" (ngSubmit)="activationForm.valid && activate()">
+      <mat-form-field appearance="outline"
+        ><mat-label>New password</mat-label
+        ><input
+          matInput
+          id="new-password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          [(ngModel)]="password"
+          required
+          minlength="15"
+          maxlength="128"
+        /><mat-error>Enter a valid new password.</mat-error></mat-form-field
+      ><mat-form-field appearance="outline"
+        ><mat-label>Confirm password</mat-label
+        ><input
+          matInput
+          id="confirm-password"
+          name="confirmation"
+          type="password"
+          autocomplete="new-password"
+          [(ngModel)]="confirmation"
+          required
+          minlength="15"
+          maxlength="128"
+        /><mat-error>Enter a valid confirm password.</mat-error></mat-form-field
+      >
+      <p>Use 15–128 characters.</p>
+      <button mat-flat-button type="submit" [disabled]="busy()">
+        {{ busy() ? 'Activating...' : 'Activate account' }}
+      </button>
+    </form>
+  }
+  @if (message()) {
+    <p class="message" role="status">{{ message() }}</p>
+  }
+</app-auth-layout>

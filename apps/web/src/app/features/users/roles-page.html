@@ -1,0 +1,100 @@
+<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">ADMINISTRATION</p>
+      <h1>Roles &amp; permissions</h1>
+      <p class="muted">Understand access levels and create roles for your company.</p>
+    </div>
+    <button
+      mat-flat-button
+      [disabled]="loading() || !catalog().permissions.length"
+      (click)="edit()"
+    >
+      <span class="button-content"><app-icon name="plus" />Create role</span>
+    </button>
+  </div>
+  <nav class="access-tabs" aria-label="Access management">
+    <a mat-button routerLink="/administration/users">Users</a
+    ><a mat-flat-button routerLink="/administration/roles" aria-current="page"
+      >Roles &amp; permissions</a
+    >
+  </nav>
+  @if (error()) {
+    <p role="alert" class="message error">
+      {{ error() }} <button mat-button (click)="load()">Retry</button>
+    </p>
+  }
+  @if (success()) {
+    <p role="status" class="message">{{ success() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading roles" />
+  }
+  <div class="roles-layout">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>
+            Company roles <span class="count">{{ catalog().roles.length }}</span>
+          </h2>
+          <p class="muted">Select a role to review its permissions.</p>
+        </div>
+      </div>
+      <div class="role-list">
+        @for (role of catalog().roles; track role.id) {
+          <button
+            type="button"
+            class="role-card"
+            [class.selected]="selected()?.id === role.id"
+            [attr.aria-pressed]="selected()?.id === role.id"
+            (click)="selected.set(role)"
+          >
+            <span class="role-card-title"
+              >{{ role.name
+              }}<span class="role-type">{{ role.built_in ? 'Built-in' : 'Custom' }}</span></span
+            ><span class="muted"
+              >{{ role.user_count }} users · {{ role.permission_codes.length }} permissions</span
+            >
+          </button>
+        }
+      </div>
+    </section>
+    @if (selected(); as role) {
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>{{ role.name }}</h2>
+            <p class="muted">{{ role.code }}</p>
+          </div>
+          @if (!role.built_in && !role.assigned_to_me && role.can_assign) {
+            <button mat-stroked-button [disabled]="loading()" (click)="edit(role)">
+              Edit role
+            </button>
+          }
+        </div>
+        <div class="panel-body">
+          <p class="muted">
+            {{
+              role.built_in
+                ? 'Built-in roles are read-only. Create a custom role when your company needs different permissions.'
+                : role.assigned_to_me
+                  ? 'This role is assigned to you. Another authorized administrator must edit it.'
+                  : 'Changes apply to everyone assigned this role. Users keep permissions granted by their other roles.'
+            }}
+          </p>
+          <ul class="permission-list">
+            @for (code of role.permission_codes; track code) {
+              <li>
+                <span class="permission-mark" aria-hidden="true">✓</span>
+                <div>
+                  <strong>{{ description(code) }}</strong
+                  ><small>{{ code }}</small>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      </section>
+    }
+  </div>
+</main>

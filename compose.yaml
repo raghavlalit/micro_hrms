@@ -1,0 +1,22 @@
+name: microhrms
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: microhrms
+      POSTGRES_USER: microhrms_migrator
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run db:setup first}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run npm run db:setup first}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U microhrms_migrator -d microhrms"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+volumes:
+  postgres_data:

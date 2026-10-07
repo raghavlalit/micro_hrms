@@ -1,0 +1,78 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content>
+    @if (data.user; as user) {
+      <p class="muted">{{ user.display_name }} · {{ user.email }}</p>
+    }
+    @if (data.action === 'invite') {
+      <p class="muted">
+        Create a company login. To link an employee profile, invite them from Employees instead.
+      </p>
+      <mat-form-field appearance="outline"
+        ><mat-label>Full name</mat-label
+        ><input
+          matInput
+          formControlName="display_name"
+          maxlength="100"
+          autocomplete="name"
+        /><mat-error>Enter a name.</mat-error></mat-form-field
+      >
+      <mat-form-field appearance="outline"
+        ><mat-label>Email address</mat-label
+        ><input
+          matInput
+          formControlName="email"
+          maxlength="254"
+          type="email"
+          autocomplete="email"
+        /><mat-error>Enter a valid email address.</mat-error></mat-form-field
+      >
+    }
+    @if (data.action === 'invite' || data.action === 'roles') {
+      <mat-form-field appearance="outline"
+        ><mat-label>Roles</mat-label
+        ><mat-select formControlName="role_ids" multiple>
+          @for (role of data.roles; track role.id) {
+            <mat-option [value]="role.id" [disabled]="!role.can_assign">{{ role.name }}</mat-option>
+          }</mat-select
+        ><mat-error>Select at least one role.</mat-error></mat-form-field
+      >
+      <p class="muted">
+        Permissions from all selected roles are combined. Role changes sign the user out of existing
+        sessions.
+      </p>
+    }
+    @if (data.action === 'status') {
+      <p class="muted">
+        {{
+          data.user?.status === 'disabled'
+            ? 'Restore login access. An unactivated account will need a fresh invitation. Employee employment status stays unchanged.'
+            : 'Block sign-in immediately and revoke sessions and pending links. Employee employment status and history stay unchanged.'
+        }}
+      </p>
+    }
+    @if (data.action === 'reinvite') {
+      <p class="muted">
+        The previous activation link will stop working. Share the new link securely; email delivery
+        is not configured yet.
+      </p>
+    }
+    <mat-form-field appearance="outline"
+      ><mat-label>Reason for this change</mat-label
+      ><textarea matInput formControlName="reason" maxlength="500" rows="3"></textarea
+      ><mat-error>Enter a reason of at least 3 characters.</mat-error></mat-form-field
+    >
+    @if (error()) {
+      <p role="alert" class="message error">{{ error() }}</p>
+    }
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Saving user access" />
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"
+    ><button mat-button type="button" [disabled]="busy()" (click)="dialog.close()">Cancel</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      {{ busy() ? 'Saving…' : title }}
+    </button></mat-dialog-actions
+  >
+</form>

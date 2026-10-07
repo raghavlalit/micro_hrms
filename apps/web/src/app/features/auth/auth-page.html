@@ -1,0 +1,151 @@
+<app-auth-layout>
+  @if (!ready()) {
+    <h1>Welcome back</h1>
+    <mat-progress-bar mode="indeterminate" aria-label="Loading your session" />
+  } @else if (!user()) {
+    <p class="eyebrow">WELCOME BACK</p>
+    <h1>Sign in to your workspace</h1>
+    <p class="muted">Manage your people, with everything in one place.</p>
+    <form #loginForm="ngForm" (ngSubmit)="loginForm.valid && login()">
+      <mat-form-field appearance="outline"
+        ><mat-label>Account type</mat-label
+        ><select matNativeControl id="kind" name="kind" [(ngModel)]="kind">
+          <option value="platform">Platform administrator</option>
+          <option value="tenant">Company user</option>
+        </select></mat-form-field
+      >
+      @if (kind === 'tenant') {
+        <mat-form-field appearance="outline"
+          ><mat-label>Company code</mat-label
+          ><input
+            matInput
+            id="company"
+            name="company"
+            [(ngModel)]="company"
+            required
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            maxlength="100"
+            placeholder="your-company"
+          /><mat-error>Enter a valid company code.</mat-error></mat-form-field
+        >
+      }
+      <mat-form-field appearance="outline"
+        ><mat-label>Email address</mat-label
+        ><input
+          matInput
+          id="email"
+          name="email"
+          type="email"
+          [(ngModel)]="email"
+          required
+          maxlength="254"
+          autocomplete="username"
+          email
+        /><mat-error>Enter a valid email address.</mat-error></mat-form-field
+      >
+      <mat-form-field appearance="outline"
+        ><mat-label>Password</mat-label
+        ><input
+          matInput
+          id="password"
+          name="password"
+          type="password"
+          [(ngModel)]="password"
+          required
+          maxlength="128"
+          autocomplete="current-password"
+        /><mat-error>Enter a valid password.</mat-error></mat-form-field
+      >
+      <button mat-flat-button type="submit" [disabled]="busy()">
+        {{ busy() ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+  } @else {
+    <p class="eyebrow">
+      {{ user()!.kind === 'platform' ? 'PLATFORM ADMINISTRATION' : 'COMPANY WORKSPACE' }}
+    </p>
+    <h1>{{ user()!.mustChangePassword ? 'Set your own password' : 'You’re signed in' }}</h1>
+    <p class="muted">{{ user()!.email }}</p>
+    @if (user()!.mustChangePassword || changingPassword()) {
+      <p>Choose a password of 15–128 characters. Changing it signs out all active sessions.</p>
+      <form #passwordForm="ngForm" (ngSubmit)="passwordForm.valid && changePassword()">
+        <mat-form-field appearance="outline"
+          ><mat-label>Current password</mat-label
+          ><input
+            matInput
+            id="current"
+            name="current"
+            type="password"
+            [(ngModel)]="password"
+            required
+            maxlength="128"
+            autocomplete="current-password"
+          /><mat-error>Enter a valid current password.</mat-error></mat-form-field
+        >
+        <mat-form-field appearance="outline"
+          ><mat-label>New password</mat-label
+          ><input
+            matInput
+            id="new"
+            name="new"
+            type="password"
+            [(ngModel)]="newPassword"
+            required
+            minlength="15"
+            maxlength="128"
+            autocomplete="new-password"
+          /><mat-error>Enter a valid new password.</mat-error></mat-form-field
+        >
+        <mat-form-field appearance="outline"
+          ><mat-label>Confirm new password</mat-label
+          ><input
+            matInput
+            id="confirm"
+            name="confirm"
+            type="password"
+            [(ngModel)]="confirmPassword"
+            required
+            minlength="15"
+            maxlength="128"
+            autocomplete="new-password"
+          /><mat-error>Enter a valid confirm new password.</mat-error></mat-form-field
+        >
+        <button mat-flat-button type="submit" [disabled]="busy()">
+          {{ busy() ? 'Updating…' : 'Change password' }}
+        </button>
+      </form>
+    } @else {
+      <div class="notice">Your account is ready.</div>
+      @if (user()!.kind === 'platform') {
+        <p><a routerLink="/platform/companies">Open company dashboard</a></p>
+      } @else {
+        <p><a routerLink="/company/overview">Open company workspace</a></p>
+      }
+      <button mat-flat-button type="button" (click)="changingPassword.set(true)">
+        Change password
+      </button>
+    }
+    <div class="actions">
+      <button
+        mat-stroked-button
+        type="button"
+        class="secondary"
+        (click)="logout()"
+        [disabled]="busy()"
+      >
+        Sign out</button
+      ><button
+        mat-stroked-button
+        type="button"
+        class="secondary"
+        (click)="logout(true)"
+        [disabled]="busy()"
+      >
+        Sign out all sessions
+      </button>
+    </div>
+  }
+  @if (message()) {
+    <p class="message" role="status" aria-live="polite">{{ message() }}</p>
+  }
+</app-auth-layout>
