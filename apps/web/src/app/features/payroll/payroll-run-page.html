@@ -1,0 +1,188 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">PAYROLL REVIEW</span>
+      <h1>Monthly payroll</h1>
+      <p>Review employee amounts before locking and publishing.</p>
+    </div>
+    <a mat-stroked-button routerLink="/payroll">All runs</a>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (data(); as detail) {
+    <section class="panel">
+      <div class="heading-row">
+        <div>
+          <h2>{{ detail.run.period_start }} to {{ detail.run.period_end }}</h2>
+          <p class="muted">
+            Pay date: {{ detail.run.pay_date }} · {{ detail.run.currency }} · Calculation
+            {{ detail.run.calculation_version }}
+          </p>
+        </div>
+        <span class="status">{{ detail.run.status }}</span>
+      </div>
+      <p>
+        Approved unpaid-leave deduction:
+        <strong>{{
+          detail.run.calculation_config.unpaid_leave_deduction ? 'Enabled' : 'Off'
+        }}</strong>
+      </p>
+      <div class="actions">
+        @if (detail.run.status !== 'locked') {
+          <button mat-stroked-button (click)="action('calculate')" [disabled]="loading()">
+            {{ detail.run.calculation_version ? 'Recalculate' : 'Calculate' }}
+          </button>
+        }
+        @if (detail.run.status === 'calculated') {
+          <button mat-flat-button (click)="action('review')" [disabled]="loading()">
+            Mark reviewed
+          </button>
+        }
+        @if (detail.run.status === 'reviewed') {
+          <button mat-flat-button (click)="action('lock')" [disabled]="loading()">
+            Lock payroll
+          </button>
+        }
+        @if (detail.run.status === 'locked' && !detail.run.published_at) {
+          <button mat-flat-button (click)="action('publish')" [disabled]="loading()">
+            Publish payslips
+          </button>
+        }
+        @if (detail.run.published_at) {
+          <span class="muted">Payslips published</span>
+        }
+        <button mat-button (click)="load()" [disabled]="loading()">Refresh</button>
+      </div>
+    </section>
+    <div class="summary-grid">
+      <article class="panel">
+        <span class="muted">Gross earnings</span><strong>{{ detail.run.gross_total }}</strong>
+      </article>
+      <article class="panel">
+        <span class="muted">Deductions</span><strong>{{ detail.run.deduction_total }}</strong>
+      </article>
+      <article class="panel">
+        <span class="muted">Net pay · {{ detail.run.currency }}</span
+        ><strong>{{ detail.run.net_total }}</strong>
+      </article>
+    </div>
+    @if (
+      detail.run.calculation_config.pending_leave ||
+      detail.run.calculation_config.pending_corrections
+    ) {
+      <p class="message">
+        At calculation: {{ detail.run.calculation_config.pending_leave || 0 }} pending leave
+        requests and {{ detail.run.calculation_config.pending_corrections || 0 }} attendance
+        corrections. Resolve them before locking.
+      </p>
+    }
+    @if (detail.run.calculation_config.excluded?.length) {
+      <section class="panel">
+        <h2>Excluded employees</h2>
+        @for (person of detail.run.calculation_config.excluded; track person.id) {
+          <p>{{ person.name }} · {{ person.reason }}</p>
+        }
+      </section>
+    }
+    @if (detail.versions.length > 1) {
+      <section class="panel filters">
+        <mat-form-field appearance="outline"
+          ><mat-label>Calculation history</mat-label
+          ><mat-select [(ngModel)]="version" (selectionChange)="history()" [disabled]="loading()">
+            @for (v of detail.versions; track v) {
+              <mat-option [value]="v"
+                >Version {{ v
+                }}{{ v === detail.run.calculation_version ? ' · Current' : '' }}</mat-option
+              >
+            }
+          </mat-select></mat-form-field
+        >
+        <p class="muted">Earlier versions are retained for review.</p>
+      </section>
+    }
+    @if (oldItems()) {
+      <p class="message">
+        Viewing an earlier calculation. Actions apply only to the current version; use the selector
+        to return.
+      </p>
+    }
+    @for (item of oldItems() || detail.items; track item.id) {
+      <details class="panel employee-payroll" [open]="detail.items.length === 1">
+        <summary>
+          <span
+            ><strong>{{ item.input_snapshot.employee.name }}</strong
+            ><small>{{ item.input_snapshot.employee.employee_code }}</small></span
+          ><span
+            >Net: <strong>{{ item.net }}</strong> {{ detail.run.currency }}</span
+          >
+        </summary>
+        <div class="payroll-body">
+          <p class="muted">
+            {{ item.input_snapshot.employed_days }} /
+            {{ item.input_snapshot.calendar_days }} calendar days ·
+            {{ item.input_snapshot.unpaid_half_units / 2 }} unpaid leave days deducted
+          </p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Notes / action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of item.lines; track line.id) {
+                  <tr>
+                    <td>{{ line.component_name }}</td>
+                    <td>{{ line.kind }}</td>
+                    <td>{{ line.amount }}</td>
+                    <td>
+                      <span class="reason">{{ line.adjustment_reason }}</span>
+                      @if (line.is_manual && detail.run.status !== 'locked' && !oldItems()) {
+                        <button mat-button (click)="action('adjust', item, line)">
+                          Edit adjustment
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>Totals</td>
+                  <td>Gross {{ item.gross }}</td>
+                  <td>Deductions {{ item.deductions }}</td>
+                  <td>
+                    <strong>Net {{ item.net }}</strong>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="actions">
+            @if (detail.run.status !== 'locked' && !oldItems()) {
+              <button mat-stroked-button (click)="action('adjust', item)">Add adjustment</button>
+            }
+            @if (detail.run.published_at && !oldItems()) {
+              <a mat-stroked-button [routerLink]="['/payroll/payslips', item.id]">View payslip</a>
+            }
+          </div>
+        </div>
+      </details>
+    } @empty {
+      <section class="panel empty-state">
+        <h2>Ready to calculate</h2>
+        <p>
+          Calculation checks salary coverage for every eligible employee. No salary amount is
+          guessed.
+        </p>
+      </section>
+    }
+  }
+</section>

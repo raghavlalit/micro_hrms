@@ -1,4 +1,7 @@
-import { Routes } from '@angular/router';
+import { CanActivateFn, Router, Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { catchError, map, of } from 'rxjs';
+import { SessionService } from '../../core/auth/session.service';
 import { sessionGuard } from '../../core/auth/session.guard';
 import { MasterConfig, nameAndCode } from '../../shared/master-editor/master-config';
 const records: Record<string, MasterConfig> = {
@@ -17,7 +20,7 @@ const records: Record<string, MasterConfig> = {
     title: 'Leave policies',
     endpoint: 'leave/policies',
     description:
-      'Define your company rules. Policies do not automatically assign employees or credit balances; those workflows come with the leave module.',
+      'Define company rules, then assign an annual entitlement from Leave management. Existing request calculations retain their original rules.',
     fields: [
       { key: 'name', label: 'Policy name', type: 'text', required: true },
       {
@@ -56,10 +59,44 @@ const records: Record<string, MasterConfig> = {
     },
   },
 };
-export const routes: Routes = Object.entries(records).map(([path, master]) => ({
-  path,
-  canActivate: [sessionGuard],
-  data: { scope: 'tenant', permission: 'leave.manage', master },
-  loadComponent: () =>
-    import('../../shared/master-editor/master-editor').then((m) => m.MasterEditor),
-}));
+const leaveGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  return inject(SessionService)
+    .load()
+    .pipe(
+      map(({ user }) =>
+        user.kind === 'tenant' &&
+        !user.mustChangePassword &&
+        user.permissions.some((p) =>
+          ['leave.self', 'leave.manage', 'leave.approve.team'].includes(p),
+        )
+          ? true
+          : router.createUrlTree(['/login']),
+      ),
+      catchError(() => of(router.createUrlTree(['/login']))),
+    );
+};
+export const routes: Routes = [
+  {
+    path: '',
+    canActivate: [leaveGuard],
+    loadComponent: () => import('./leave-page').then((m) => m.LeavePage),
+  },
+  {
+    path: 'requests',
+    canActivate: [leaveGuard],
+    loadComponent: () => import('./leave-requests-page').then((m) => m.LeaveRequestsPage),
+  },
+  {
+    path: 'calendar',
+    canActivate: [leaveGuard],
+    loadComponent: () => import('./leave-calendar-page').then((m) => m.LeaveCalendarPage),
+  },
+  ...Object.entries(records).map(([path, master]) => ({
+    path,
+    canActivate: [sessionGuard],
+    data: { scope: 'tenant', permission: 'leave.manage', master },
+    loadComponent: () =>
+      import('../../shared/master-editor/master-editor').then((m) => m.MasterEditor),
+  })),
+];

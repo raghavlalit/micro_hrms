@@ -59,7 +59,7 @@ for holidays in this release; edit corrections are audited.
 ## Attendance and leave integration
 
 `HolidayService.applicableDates(manager, tenantId, locationId, from, to)` is
-exported by `HolidaysModule` and used by attendance; leave integration is pending. Call it with
+exported by `HolidaysModule` and used by attendance and leave. Call it with
 an already authenticated, tenant-scoped transaction manager and validated date
 range. The range is inclusive and returns a `Set<string>` of company-wide dates
 plus the supplied location's dates. A null location includes company-wide only.
@@ -70,7 +70,7 @@ remain responsibilities of the modules that consume it. They must preserve
 their historical calculation inputs and avoid silently changing locked results
 when a holiday or employee location changes. Attendance snapshots these inputs
 for saved days and uses current applicability for unrecorded calendar days.
-Holiday edits do not recalculate saved attendance. Leave calculations are pending.
+Holiday edits do not recalculate saved attendance or submitted leave snapshots.
 
 ## API and code
 

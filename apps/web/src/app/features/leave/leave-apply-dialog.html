@@ -1,22 +1,93 @@
 <h2 mat-dialog-title>Apply for leave</h2>
 <mat-dialog-content>
   <p class="muted">{{ data.employee.name }} · {{ data.year }} · {{ data.timezone }}</p>
-  <p>For one half-day, choose the same AM or PM at both ends. Multi-day leave may start with PM and end with AM.</p>
-  @if(error()) {<p class="message error" role="alert">{{error()}}</p>}
+  <p>
+    For one half-day, choose the same AM or PM at both ends. Multi-day leave may start with PM and
+    end with AM.
+  </p>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
   <form [formGroup]="form" class="leave-form">
-    <mat-form-field appearance="outline"><mat-label>Assigned leave policy</mat-label><mat-select formControlName="policy_id">@for(policy of data.assignments;track policy.policy_id) {@if(policy.is_active) {<mat-option [value]="policy.policy_id">{{policy.name}} · {{policy.is_paid ? 'Paid' : 'Unpaid'}}</mat-option>}}</mat-select><mat-error>Select a policy</mat-error></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Assigned leave policy</mat-label
+      ><mat-select formControlName="policy_id">
+        @for (policy of data.assignments; track policy.policy_id) {
+          @if (policy.is_active) {
+            <mat-option [value]="policy.policy_id"
+              >{{ policy.name }} · {{ policy.is_paid ? 'Paid' : 'Unpaid' }}</mat-option
+            >
+          }
+        }</mat-select
+      ><mat-error>Select a policy</mat-error></mat-form-field
+    >
     <div class="form-row">
-      <mat-form-field appearance="outline"><mat-label>Start date</mat-label><input matInput type="date" formControlName="start_date" [min]="data.year+'-01-01'" [max]="data.year+'-12-31'" required></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>End date</mat-label><input matInput type="date" formControlName="end_date" [min]="data.year+'-01-01'" [max]="data.year+'-12-31'" required></mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>Start date</mat-label
+        ><input
+          matInput
+          type="date"
+          formControlName="start_date"
+          [min]="data.year + '-01-01'"
+          [max]="data.year + '-12-31'"
+          required
+      /></mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>End date</mat-label
+        ><input
+          matInput
+          type="date"
+          formControlName="end_date"
+          [min]="data.year + '-01-01'"
+          [max]="data.year + '-12-31'"
+          required
+      /></mat-form-field>
     </div>
     <div class="form-row">
-      <mat-form-field appearance="outline"><mat-label>First day</mat-label><mat-select formControlName="start_half"><mat-option value="full">Full day</mat-option><mat-option value="am">AM half</mat-option><mat-option value="pm">PM half</mat-option></mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Last day</mat-label><mat-select formControlName="end_half"><mat-option value="full">Full day</mat-option><mat-option value="am">AM half</mat-option><mat-option value="pm">PM half</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>First day</mat-label
+        ><mat-select formControlName="start_half"
+          ><mat-option value="full">Full day</mat-option><mat-option value="am">AM half</mat-option
+          ><mat-option value="pm">PM half</mat-option></mat-select
+        ></mat-form-field
+      >
+      <mat-form-field appearance="outline"
+        ><mat-label>Last day</mat-label
+        ><mat-select formControlName="end_half"
+          ><mat-option value="full">Full day</mat-option><mat-option value="am">AM half</mat-option
+          ><mat-option value="pm">PM half</mat-option></mat-select
+        ></mat-form-field
+      >
     </div>
-    <mat-form-field appearance="outline"><mat-label>Reason</mat-label><textarea matInput rows="3" formControlName="reason" maxlength="500"></textarea><mat-error>Enter a reason of 3–500 characters</mat-error></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Reason</mat-label
+      ><textarea matInput rows="3" formControlName="reason" maxlength="500"></textarea
+      ><mat-error>Enter a reason of 3–500 characters</mat-error></mat-form-field
+    >
   </form>
-  @if(preview();as result) {
-    <div class="preview"><strong>{{result.units}} day(s) · {{result.is_paid ? 'Paid' : 'Unpaid'}}</strong><p>{{result.available === null ? 'No balance limit' : 'Available before request: '+result.available+' days'}}</p><p class="muted">Charged dates: @for(day of result.days;track day.date) {<span>{{day.date | date:'dd MMM':'UTC'}} ({{day.half}}) · </span>}</p></div>
+  @if (preview(); as result) {
+    <div class="preview">
+      <strong>{{ result.units }} day(s) · {{ result.is_paid ? 'Paid' : 'Unpaid' }}</strong>
+      <p>
+        {{
+          result.available === null
+            ? 'No balance limit'
+            : 'Available before request: ' + result.available + ' days'
+        }}
+      </p>
+      <p class="muted">
+        Charged dates:
+        @for (day of result.days; track day.date) {
+          <span>{{ day.date | date: 'dd MMM' : 'UTC' }} ({{ day.half }}) · </span>
+        }
+      </p>
+    </div>
   }
 </mat-dialog-content>
-<mat-dialog-actions align="end"><button mat-button mat-dialog-close [disabled]="busy()">Close</button><button mat-stroked-button (click)="calculate()" [disabled]="busy()">Calculate days</button><button mat-flat-button (click)="submit()" [disabled]="busy() || !preview()">Submit request</button></mat-dialog-actions>
+<mat-dialog-actions align="end"
+  ><button mat-button mat-dialog-close [disabled]="busy()">Close</button
+  ><button mat-stroked-button (click)="calculate()" [disabled]="busy()">Calculate days</button
+  ><button mat-flat-button (click)="submit()" [disabled]="busy() || !preview()">
+    Submit request
+  </button></mat-dialog-actions
+>

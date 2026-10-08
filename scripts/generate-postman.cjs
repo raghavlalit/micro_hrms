@@ -751,6 +751,289 @@ collection.item.push(
   ),
 );
 
+const leaveApplication = {
+  policy_id: "{{leave_policy_id}}",
+  start_date: "{{leave_start_date}}",
+  end_date: "{{leave_end_date}}",
+  start_half: "full",
+  end_half: "full",
+  reason: "Planned personal leave",
+};
+collection.item.push(
+  folder(
+    "10 — Leave management",
+    [
+      get("My annual leave balances", "/leave/me", {
+        query: [{ key: "year", value: "{{leave_year}}" }],
+        description:
+          "leave.self; linked employee. Includes assigned policies and credited, pending, used and available days. January–December year.",
+      }),
+      get("Employees in leave scope", "/leave/people", {
+        query: pageQuery,
+        description:
+          "leave.manage sees company employees; leave.approve.team sees direct reports.",
+      }),
+      get(
+        "Employee balances and assignments",
+        "/leave/employees/{{employee_id}}",
+        { query: [{ key: "year", value: "{{leave_year}}" }] },
+      ),
+      post(
+        "Assign annual entitlement",
+        "/leave/employees/{{employee_id}}/entitlements",
+        {
+          body: {
+            policy_id: "{{leave_policy_id}}",
+            year: 2026,
+            credited: 12,
+            carry_forward: 0,
+            reason: "Reviewed annual entitlement",
+          },
+          dto: "leave/leave.dto:LeaveEntitlementDto",
+          save: idSave("leave_balance_id"),
+          description:
+            "leave.manage. Review the numeric year and credited amount in the body. One entitlement per employee/type/year. This assigns the policy within employment/effective dates and credits the reviewed annual amount, without automatic proration. For uncontrolled policies use credited=0. Carry-forward requires an enabled policy, sufficient previous-year available balance and no pending requests; it transfers those days out of the previous year.",
+        },
+      ),
+      post(
+        "Adjust leave balance",
+        "/leave/balances/{{leave_balance_id}}/adjustments",
+        {
+          body: {
+            units: 1,
+            reason: "Reviewed balance correction",
+            operation_id: "{{leave_adjustment_operation_id}}",
+          },
+          dto: "leave/leave.dto:LeaveAdjustmentDto",
+          description:
+            "leave.manage. Positive or negative adjustment; available balance cannot go negative. Keep the same operation_id for a retry of the exact same operation; choose a fresh UUID for every new adjustment.",
+        },
+      ),
+      get(
+        "Balance movement history",
+        "/leave/balances/{{leave_balance_id}}/entries",
+        { query: pageQuery },
+      ),
+      post("Calculate leave application", "/leave/preview", {
+        body: leaveApplication,
+        dto: "leave/leave.dto:LeaveApplicationDto",
+        description:
+          "leave.self. Read-only calculation, including balance and overlap validation. Requires assigned policy and a work schedule. Dates must be within one calendar year. For a single half-day set both start_half and end_half to am or pm. Multi-day ranges can start pm and end am.",
+      }),
+      post("Submit leave application", "/leave/requests", {
+        body: leaveApplication,
+        dto: "leave/leave.dto:LeaveApplicationDto",
+        save: idSave("leave_request_id"),
+        description:
+          "Reserves controlled balance, snapshots policy/calendar inputs and rejects overlaps. Uncontrolled leave has no artificial balance limit.",
+      }),
+      get("My leave requests", "/leave/requests", {
+        query: [
+          ...pageQuery,
+          { key: "scope", value: "mine" },
+          { key: "status", value: "pending", disabled: true },
+        ],
+      }),
+      get("Review queue and company history", "/leave/requests", {
+        query: [
+          ...pageQuery,
+          { key: "scope", value: "review" },
+          { key: "status", value: "pending" },
+        ],
+        description:
+          "HR company scope or manager direct reports. Self-review is forbidden. Use the response can_review/can_cancel flags.",
+      }),
+      post("Approve leave", "/leave/requests/{{leave_request_id}}/review", {
+        body: { decision: "approved", comment: "Approved after team review" },
+        dto: "leave/leave.dto:LeaveReviewDto",
+        description:
+          "Manager/direct-report or HR. Moves reserved units to used; validates attendance conflicts and payroll locks again. Cannot approve own leave.",
+      }),
+      post("Reject leave", "/leave/requests/{{leave_request_id}}/review", {
+        body: {
+          decision: "rejected",
+          comment: "Please discuss alternative dates",
+        },
+        dto: "leave/leave.dto:LeaveReviewDto",
+        description:
+          "Releases the pending reservation. Only pending requests can be reviewed.",
+      }),
+      post("Cancel leave", "/leave/requests/{{leave_request_id}}/cancel", {
+        body: { reason: "Plans changed" },
+        dto: "leave/leave.dto:LeaveReasonDto",
+        description:
+          "Employee can cancel own pending leave. HR can cancel pending or approved leave. Approved cancellation restores balance and removes the attendance overlay; locked payroll dates block it.",
+      }),
+      get("Approved leave calendar", "/leave/calendar", {
+        query: [{ key: "month", value: "{{leave_month}}" }],
+        description:
+          "Employee own scope, manager direct reports or HR company scope. Only approved chargeable dates; excludes sensitive leave reasons, categories and paid flags.",
+      }),
+    ],
+    "Leave workflows with tenant isolation and audited balance movements. Run deliberately with the required employee/reviewer/HR identity. Initialize policies and entitlements before applying.",
+  ),
+);
+
+const payrollTransition = {
+  revision: "{{payroll_revision_id}}",
+  calculation_version: "{{payroll_calculation_version}}",
+  reason: "Reviewed payroll amounts",
+};
+const salaryLines = [
+  { component_id: "{{salary_component_id}}", amount: "30000.00" },
+];
+collection.item.push(
+  folder(
+    "11 — Payroll and payslips",
+    [
+      get("Payroll calculation settings", "/payroll/settings"),
+      put("Update payroll calculation settings", "/payroll/settings", {
+        body: { unpaid_leave_deduction: false },
+        dto: "payroll/payroll.dto:PayrollSettingsDto",
+        description:
+          "payroll.manage. Default is off. Set true only when HR enables approved unpaid-leave deductions. Applies to NEW runs; existing runs retain their saved setting. Fixed components and calendar-day proration; no automatic statutory rates.",
+      }),
+      get("Employees for salary assignment", "/payroll/people", {
+        query: pageQuery,
+      }),
+      get(
+        "Employee salary history",
+        "/payroll/employees/{{employee_id}}/salaries",
+      ),
+      post(
+        "Create salary revision",
+        "/payroll/employees/{{employee_id}}/salaries",
+        {
+          body: {
+            effective_from: "{{salary_effective_date}}",
+            lines: salaryLines,
+            reason: "Approved monthly salary",
+          },
+          dto: "payroll/payroll.dto:SalaryCreateDto",
+          save: idSave("salary_structure_id"),
+          description:
+            "Monthly amounts are DECIMAL STRINGS, not JSON numbers. Use active same-company earning/deduction component IDs. New revisions must follow the latest effective date; the previous revision closes automatically. Dates affecting locked payroll are rejected.",
+        },
+      ),
+      put(
+        "Correct salary amounts",
+        "/payroll/salaries/{{salary_structure_id}}",
+        {
+          body: {
+            lines: salaryLines,
+            reason: "Correct reviewed salary allocation",
+          },
+          dto: "payroll/payroll.dto:SalaryEditDto",
+          description:
+            "Replaces the component allocation within the same effective dates. Removed lines retain zero amounts. Cannot affect a locked period; existing unlocked payroll requires recalculation.",
+        },
+      ),
+      get("List payroll runs", "/payroll/runs", { query: pageQuery }),
+      post("Create monthly payroll run", "/payroll/runs", {
+        body: { month: "{{payroll_month}}", pay_date: "{{payroll_pay_date}}" },
+        dto: "payroll/payroll.dto:PayrollRunDto",
+        save: idSave("payroll_run_id"),
+        description:
+          "One run per calendar month. Copies currency and unpaid-leave configuration. Assign employee salaries before calculation.",
+      }),
+      get(
+        "Payroll run details — refresh revision",
+        "/payroll/runs/{{payroll_run_id}}",
+        {
+          save: "pm.environment.set('payroll_revision_id', data.run.calculation_config.revision); pm.environment.set('payroll_calculation_version', data.run.calculation_version);",
+          description:
+            "Run before EVERY calculation/adjustment/review/lock/publish after a mutation. Captures the current revision and version, preventing approval from a stale screen. Choose payroll_employee_id from current items; it is a payroll item UUID, not the employee profile UUID.",
+        },
+      ),
+      get(
+        "Previous payroll calculation",
+        "/payroll/runs/{{payroll_run_id}}/versions/{{payroll_history_version}}",
+      ),
+      post(
+        "Calculate or recalculate payroll",
+        "/payroll/runs/{{payroll_run_id}}/calculate",
+        {
+          body: {
+            revision: "{{payroll_revision_id}}",
+            discard_adjustments: false,
+            reason: "Calculate reviewed salary inputs",
+          },
+          dto: "payroll/payroll.dto:PayrollCalculateDto",
+          description:
+            "Creates a retained calculation version. Explicitly set discard_adjustments=true if replacing a version containing nonzero manual adjustments. Missing salary coverage aborts the entire calculation.",
+        },
+      ),
+      post(
+        "Add manual payroll adjustment",
+        "/payroll/employees/{{payroll_employee_id}}/adjustments",
+        {
+          body: {
+            ...payrollTransition,
+            operation_id: "{{payroll_adjustment_operation_id}}",
+            name: "Reviewed bonus",
+            kind: "earning",
+            amount: "100.00",
+          },
+          dto: "payroll/payroll.dto:PayrollAdjustmentDto",
+          save: idSave("payroll_adjustment_id"),
+          description:
+            "payroll_employee_id is the current payroll item. Reuse operation_id only for a retry of the identical action; use a new UUID for every distinct adjustment. Amounts are decimal strings. Changing amounts clears review.",
+        },
+      ),
+      put(
+        "Edit or void manual adjustment",
+        "/payroll/adjustments/{{payroll_adjustment_id}}",
+        {
+          body: {
+            ...payrollTransition,
+            expected_amount: "100.00",
+            amount: "0.00",
+          },
+          dto: "payroll/payroll.dto:PayrollAdjustmentEditDto",
+          description:
+            "Refresh the run revision and enter the current expected_amount. Set amount=0.00 to void a manual line while retaining history. Cannot edit generated lines or old calculation versions.",
+        },
+      ),
+      post("Mark payroll reviewed", "/payroll/runs/{{payroll_run_id}}/review", {
+        body: payrollTransition,
+        dto: "payroll/payroll.dto:PayrollTransitionDto",
+        description:
+          "Requires calculated status and unchanged salary/employment/unpaid-leave inputs. Refresh run details after success.",
+      }),
+      post("Lock reviewed payroll", "/payroll/runs/{{payroll_run_id}}/lock", {
+        body: payrollTransition,
+        dto: "payroll/payroll.dto:PayrollTransitionDto",
+        description:
+          "Irreversible through this release. Month must have ended; resolve pending leave and attendance corrections first. Rechecks current inputs and freezes the period against attendance/leave changes. Refresh run details after success.",
+      }),
+      post(
+        "Publish private payslip PDFs",
+        "/payroll/runs/{{payroll_run_id}}/publish",
+        {
+          body: payrollTransition,
+          dto: "payroll/payroll.dto:PayrollTransitionDto",
+          description:
+            "Locked runs only. Generates files in private PAYSLIP_STORAGE_DIR. Requires persistent storage; non-ASCII names require PAYSLIP_FONT_PATH. Repeat publication is idempotent. Does not pay employees or send email.",
+        },
+      ),
+      get("My published payslips", "/payslips/me", {
+        query: pageQuery,
+        description:
+          "payslips.read.self. Only the linked employee’s own published/locked payslips. Choose payslip_id from the list; HR can also use a published current payroll item ID.",
+      }),
+      get("View published payslip", "/payslips/{{payslip_id}}", {
+        description:
+          "Employee owner or payroll.manage. Returns only the pay statement, excluding private file keys and full calculation inputs.",
+      }),
+      get("Download private payslip PDF", "/payslips/{{payslip_id}}/download", {
+        description:
+          "Authenticated binary application/pdf response with no-store caching. Use Postman Save Response / Send and Download. Owner or payroll.manage only.",
+      }),
+    ],
+    "Monthly payroll workflow. Refresh run details between mutations to update revision/version variables. Monetary request values must be strings. Earlier calculations are retained; locking has no undo endpoint.",
+  ),
+);
+
 const defaults = {
   base_url: "http://localhost:3000/api/v1",
   platform_email: "microhrms@yopmail.com",
@@ -795,6 +1078,25 @@ const defaults = {
   attendance_check_in: "2026-10-06T09:00:00+05:30",
   attendance_check_out: "2026-10-06T18:00:00+05:30",
   regularization_id: "",
+  leave_year: "2026",
+  leave_month: "2026-10",
+  leave_start_date: "2026-10-08",
+  leave_end_date: "2026-10-08",
+  leave_balance_id: "",
+  leave_request_id: "",
+  leave_adjustment_operation_id: "c0bfba30-1e55-4b51-9a04-e651584a4ca2",
+  salary_structure_id: "",
+  salary_effective_date: "2026-01-01",
+  payroll_month: "2026-09",
+  payroll_pay_date: "2026-10-01",
+  payroll_run_id: "",
+  payroll_employee_id: "",
+  payroll_revision_id: "",
+  payroll_calculation_version: "1",
+  payroll_history_version: "1",
+  payroll_adjustment_id: "",
+  payroll_adjustment_operation_id: "ea64c99c-e4db-4c30-93e8-b49959b7f9dc",
+  payslip_id: "",
 };
 const environment = {
   id: "a207b777-5c1a-4918-b90d-f7968c2b8b06",

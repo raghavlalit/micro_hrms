@@ -1,5 +1,101 @@
-<section class="page"><header class="page-heading"><div><span class="eyebrow">LEAVE WORKFLOW</span><h1>Requests & approvals</h1><p>Review time away, track decisions and manage cancellations.</p></div><a mat-stroked-button routerLink="/leave">Leave balances</a></header>
-@if(error()){<p class="message error" role="alert">{{error()}}</p>}@if(success()){<p class="message success" role="status">{{success()}}</p>}
-<section class="panel filters">@if(selfAllowed && reviewAllowed){<mat-form-field appearance="outline"><mat-label>Scope</mat-label><mat-select [(ngModel)]="scope" (selectionChange)="load(true)" [disabled]="loading()"><mat-option value="mine">My requests</mat-option><mat-option value="review">Team / company requests</mat-option></mat-select></mat-form-field>}<mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select [(ngModel)]="status" (selectionChange)="load(true)" [disabled]="loading()"><mat-option value="">All statuses</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="approved">Approved</mat-option><mat-option value="rejected">Rejected</mat-option><mat-option value="cancelled">Cancelled</mat-option></mat-select></mat-form-field><button mat-button (click)="load()" [disabled]="loading()">Refresh</button></section>
-@if(loading()){<mat-progress-bar mode="indeterminate"/>}
-<section class="panel table-panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Employee / type</th><th>Dates</th><th>Days</th><th>Status</th><th>Reason / review</th><th>Actions</th></tr></thead><tbody>@for(row of rows();track row.id){<tr><td><strong>{{row.name}}</strong><p class="muted">{{row.type_name}}</p></td><td>{{row.start_date | date:'dd MMM yyyy':'UTC'}} ({{row.start_half}})<br>{{row.end_date | date:'dd MMM yyyy':'UTC'}} ({{row.end_half}})</td><td>{{row.units}}</td><td><span class="status">{{row.status}}</span></td><td class="reason">{{row.reason}}@if(row.review_comment){<p class="muted">Review: {{row.review_comment}}</p>}</td><td>@if(row.can_review){<button mat-button (click)="decide(row)">Review</button>}@if(row.can_cancel){<button mat-button (click)="decide(row,true)">Cancel leave</button>}</td></tr>}@empty{<tr><td colspan="6" class="empty-state">No requests match this view.</td></tr>}</tbody></table></div><div class="pagination"><button mat-button (click)="step(-1)" [disabled]="page===1 || loading()">Previous</button><span>{{total}} requests · Page {{page}}</span><button mat-button (click)="step(1)" [disabled]="page*20>=total || loading()">Next</button></div></section></section>
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">LEAVE WORKFLOW</span>
+      <h1>Requests & approvals</h1>
+      <p>Review time away, track decisions and manage cancellations.</p>
+    </div>
+    <a mat-stroked-button routerLink="/leave">Leave balances</a>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="message success" role="status">{{ success() }}</p>
+  }
+  <section class="panel filters">
+    @if (selfAllowed && reviewAllowed) {
+      <mat-form-field appearance="outline"
+        ><mat-label>Scope</mat-label
+        ><mat-select [(ngModel)]="scope" (selectionChange)="load(true)" [disabled]="loading()"
+          ><mat-option value="mine">My requests</mat-option
+          ><mat-option value="review">Team / company requests</mat-option></mat-select
+        ></mat-form-field
+      >
+    }
+    <mat-form-field appearance="outline"
+      ><mat-label>Status</mat-label
+      ><mat-select [(ngModel)]="status" (selectionChange)="load(true)" [disabled]="loading()"
+        ><mat-option value="">All statuses</mat-option
+        ><mat-option value="pending">Pending</mat-option
+        ><mat-option value="approved">Approved</mat-option
+        ><mat-option value="rejected">Rejected</mat-option
+        ><mat-option value="cancelled">Cancelled</mat-option></mat-select
+      ></mat-form-field
+    ><button mat-button (click)="load()" [disabled]="loading()">Refresh</button>
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <section class="panel table-panel">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Employee / type</th>
+            <th>Dates</th>
+            <th>Days</th>
+            <th>Status</th>
+            <th>Reason / review</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>
+                <strong>{{ row.name }}</strong>
+                <p class="muted">{{ row.type_name }}</p>
+              </td>
+              <td>
+                {{ row.start_date | date: 'dd MMM yyyy' : 'UTC' }} ({{ row.start_half }})<br />{{
+                  row.end_date | date: 'dd MMM yyyy' : 'UTC'
+                }}
+                ({{ row.end_half }})
+              </td>
+              <td>{{ row.units }}</td>
+              <td>
+                <span class="status">{{ row.status }}</span>
+              </td>
+              <td class="reason">
+                {{ row.reason }}
+                @if (row.review_comment) {
+                  <p class="muted">Review: {{ row.review_comment }}</p>
+                }
+              </td>
+              <td>
+                @if (row.can_review) {
+                  <button mat-button (click)="decide(row)">Review</button>
+                }
+                @if (row.can_cancel) {
+                  <button mat-button (click)="decide(row, true)">Cancel leave</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty-state">No requests match this view.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button mat-button (click)="step(-1)" [disabled]="page === 1 || loading()">Previous</button
+      ><span>{{ total }} requests · Page {{ page }}</span
+      ><button mat-button (click)="step(1)" [disabled]="page * 20 >= total || loading()">
+        Next
+      </button>
+    </div>
+  </section>
+</section>

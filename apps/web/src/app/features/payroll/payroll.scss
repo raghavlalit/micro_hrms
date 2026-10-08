@@ -1,0 +1,150 @@
+:host {
+  display: block;
+}
+.page-heading,
+.heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.page-heading p,
+.muted {
+  color: var(--muted);
+}
+.panel {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.panel h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.actions,
+.filters,
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filters {
+  margin-top: 14px;
+}
+.filters mat-form-field {
+  width: 220px;
+}
+.table-panel {
+  padding: 0;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.data-table {
+  min-width: 650px;
+}
+.pagination {
+  padding: 18px;
+  justify-content: flex-end;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.summary-grid strong {
+  display: block;
+  font-size: 25px;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.summary-grid span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.full-width {
+  width: 100%;
+  margin-top: 20px;
+}
+.salary-line {
+  display: grid;
+  grid-template-columns: 1fr 180px auto;
+  gap: 12px;
+  align-items: center;
+}
+.salary-line mat-form-field {
+  min-width: 0;
+}
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 320px;
+}
+.employee-payroll {
+  padding: 0;
+}
+summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  cursor: pointer;
+}
+summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+}
+.payroll-body {
+  padding: 0 24px 24px;
+}
+.payroll-body .actions {
+  margin-top: 20px;
+}
+.payslip .summary-grid {
+  margin-top: 28px;
+}
+tfoot td {
+  background: #f5faf8;
+}
+.data-table td:last-child {
+  max-width: 360px;
+}
+.panel .heading-row {
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .salary-line {
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-bottom: 1px solid #dce5e7;
+    margin-bottom: 16px;
+  }
+  .filters mat-form-field {
+    width: 100%;
+  }
+  summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .actions {
+    width: 100%;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .summary-grid strong {
+    font-size: 23px;
+  }
+}

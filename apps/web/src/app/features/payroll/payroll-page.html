@@ -1,0 +1,107 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">PAYROLL WORKSPACE</span>
+      <h1>Payroll management</h1>
+      <p>Calculate, review and publish monthly payroll.</p>
+    </div>
+    <div class="actions">
+      <a mat-stroked-button routerLink="/payroll/salaries">Salary structures</a
+      ><a mat-stroked-button routerLink="/payroll/components">Components</a>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="message" role="status">{{ success() }}</p>
+  }
+  <section class="panel">
+    <h2>Calculation settings</h2>
+    <p class="muted">{{ currency }} · Calendar-day proration · Monthly fixed components</p>
+    <mat-checkbox [(ngModel)]="enabled" [disabled]="busy() || !settingsReady()"
+      >Deduct approved unpaid leave in new payroll runs</mat-checkbox
+    >
+    <p class="muted">
+      Off by default. Existing runs keep their saved setting. Attendance absences and statutory
+      rates are not calculated automatically.
+    </p>
+    <button mat-stroked-button (click)="saveSettings()" [disabled]="busy() || !settingsReady()">
+      Save settings
+    </button>
+  </section>
+  <section class="panel">
+    <h2>Create monthly run</h2>
+    <form #form="ngForm" (ngSubmit)="create(form)" class="filters">
+      <mat-form-field appearance="outline"
+        ><mat-label>Payroll month</mat-label
+        ><input matInput type="month" name="month" [(ngModel)]="month" required /></mat-form-field
+      ><mat-form-field appearance="outline"
+        ><mat-label>Pay date</mat-label
+        ><input
+          matInput
+          type="date"
+          name="payDate"
+          [(ngModel)]="payDate"
+          required /></mat-form-field
+      ><button mat-flat-button type="submit" [disabled]="busy() || !settingsReady()">
+        Create run
+      </button>
+    </form>
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <section class="panel table-panel">
+    <div class="panel-heading"><h2>Payroll history</h2></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Status</th>
+            <th>Gross</th>
+            <th>Deductions</th>
+            <th>Net</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (run of rows(); track run.id) {
+            <tr>
+              <td>
+                {{ run.period_start.slice(0, 7) }}
+                <div class="muted">Pay: {{ run.pay_date }} · {{ run.currency }}</div>
+              </td>
+              <td>
+                <span class="status">{{ run.status }}</span>
+                @if (run.published_at) {
+                  <div class="muted">Payslips published</div>
+                }
+              </td>
+              <td>{{ run.gross_total }}</td>
+              <td>{{ run.deduction_total }}</td>
+              <td>
+                <strong>{{ run.net_total }}</strong>
+              </td>
+              <td><a mat-button [routerLink]="['/payroll/runs', run.id]">Open run</a></td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty-state">
+                No payroll runs yet. Assign salary structures, then create your first month.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button mat-button (click)="step(-1)" [disabled]="page === 1 || loading()">Previous</button
+      ><span>{{ total }} runs · Page {{ page }}</span
+      ><button mat-button (click)="step(1)" [disabled]="page * 20 >= total || loading()">
+        Next
+      </button>
+    </div>
+  </section>
+</section>

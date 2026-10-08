@@ -13,6 +13,27 @@ export class CompanyOverviewPage {
   readonly session = inject(SessionService);
   readonly cards = [
     {
+      title: 'Payroll',
+      description: 'Salary structures, monthly calculations, review and publication.',
+      path: '/payroll',
+      icon: 'wallet',
+      permission: 'payroll.manage',
+    },
+    {
+      title: 'My payslips',
+      description: 'View and download your published pay statements.',
+      path: '/payroll/payslips',
+      icon: 'document',
+      permission: 'payslips.read.self',
+    },
+    {
+      title: 'Leave management',
+      description: 'Plan time away, review balances and approve team requests.',
+      path: '/leave',
+      icon: 'calendar',
+      permission: 'leave.self|leave.manage|leave.approve.team',
+    },
+    {
       title: 'Attendance',
       description: 'Check in, review monthly records and manage attendance corrections.',
       path: '/attendance',

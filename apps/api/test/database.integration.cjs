@@ -44,7 +44,7 @@ async function main() {
       logging: false,
     });
     await migration.initialize();
-    assert.equal((await migration.runMigrations()).length, 6);
+    assert.equal((await migration.runMigrations()).length, 8);
     pass('fresh migrations apply');
     assert.equal((await migration.runMigrations()).length, 0);
     pass('re-running migrations is a no-op');
@@ -52,6 +52,8 @@ async function main() {
     await migration.undoLastMigration();
     assert.equal((await migration.runMigrations()).length, 2);
     pass('security rollback and reapply retain reference data safely');
+    await migration.undoLastMigration();
+    await migration.undoLastMigration();
     await migration.undoLastMigration();
     await migration.undoLastMigration();
     await migration.undoLastMigration();

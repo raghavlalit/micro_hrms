@@ -93,8 +93,27 @@ intended `employee_id`. Correction creation captures `regularization_id`.
 Use employee and reviewer logins separately; reviewers cannot approve themselves.
 See [attendance setup and rules](../docs/attendance-management.md).
 
-Only implemented endpoints are included. Leave requests,
-payroll runs, document uploads, reports, public registration and forgot/reset
+**10 — Leave management** covers annual entitlement assignment, balances and
+ledger entries, audited adjustments, application preview/submission, request
+history, reviews, cancellation and the private team calendar. Set `leave_year`,
+`leave_month`, `leave_start_date` and `leave_end_date`. Review the numeric year and
+credit in the entitlement body. Setup captures `leave_balance_id`; submission
+captures `leave_request_id`. Use a new `leave_adjustment_operation_id` UUID for
+each new adjustment and keep it unchanged for retries. See [leave setup and
+rules](../docs/leave-management.md).
+
+**11 — Payroll and payslips** covers company settings, salary revisions, monthly
+runs, calculations, manual adjustments, review, locking, publication and private
+PDF downloads. Set `payroll_month`, `payroll_pay_date` and `salary_effective_date`.
+Refresh **Run detail** before mutations to capture `payroll_revision_id` and
+`payroll_calculation_version`. Select `payroll_employee_id` from the run's items;
+this differs from the employee profile ID. Use a fresh
+`payroll_adjustment_operation_id` UUID for each adjustment and retain it for retries.
+Set `payslip_id` from the employee's published list (or the published payroll item).
+Use a completed month for locking. See [payroll setup and rules](../docs/payroll-management.md).
+
+Only implemented endpoints are included. Automated accrual,
+document uploads, reports, public registration and forgot/reset
 password routes are not currently exposed and are not fabricated here.
 
 Never commit or share exported environments containing real passwords, cookies,

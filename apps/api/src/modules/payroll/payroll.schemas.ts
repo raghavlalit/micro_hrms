@@ -12,6 +12,7 @@ import {
   index,
   check,
   tenantFk,
+  integer,
 } from '../../database/schema-helpers';
 export const SalaryComponent = schema(
   'salary_components',
@@ -63,6 +64,7 @@ export const PayrollRun = schema(
     deduction_total: decimal(2, '0'),
     net_total: decimal(2, '0'),
     calculation_config: json(),
+    calculation_version: integer(),
     reviewed_by: uuid(true),
     reviewed_at: timestamp(true),
     locked_by: uuid(true),
@@ -99,9 +101,20 @@ export const PayrollEmployee = schema(
     deductions: decimal(2, '0'),
     net: decimal(2, '0'),
     input_snapshot: json(),
+    calculation_version: integer(1),
   },
   {
-    uniques: [unique('tenant_id', 'payroll_run_id', 'employee_id')],
+    uniques: [
+      {
+        name: 'uq_payroll_employee_calculation',
+        columns: [
+          'tenant_id',
+          'payroll_run_id',
+          'employee_id',
+          'calculation_version',
+        ],
+      },
+    ],
     foreignKeys: [
       tenantFk('payroll_runs', 'payroll_run_id'),
       tenantFk('employees', 'employee_id'),

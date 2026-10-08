@@ -3953,6 +3953,1574 @@
         }
       ],
       "description": "Single daily pair; no overnight shifts, overtime or multiple breaks. Set employee work schedule before testing. Times and business dates use company timezone. Locked payroll dates cannot be changed. Run individual requests intentionally, with the appropriate self/manager/HR identity."
+    },
+    {
+      "name": "10 — Leave management",
+      "item": [
+        {
+          "name": "My annual leave balances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/me?year={{leave_year}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "me"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{leave_year}}"
+                }
+              ]
+            },
+            "description": "leave.self; linked employee. Includes assigned policies and credited, pending, used and available days. January–December year."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employees in leave scope",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/people?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "people"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "leave.manage sees company employees; leave.approve.team sees direct reports."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employee balances and assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/employees/{{employee_id}}?year={{leave_year}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "employees",
+                "{{employee_id}}"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{leave_year}}"
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Assign annual entitlement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/employees/{{employee_id}}/entitlements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "employees",
+                "{{employee_id}}",
+                "entitlements"
+              ]
+            },
+            "description": "leave.manage. Review the numeric year and credited amount in the body. One entitlement per employee/type/year. This assigns the policy within employment/effective dates and credits the reviewed annual amount, without automatic proration. For uncontrolled policies use credited=0. Carry-forward requires an enabled policy, sufficient previous-year available balance and no pending requests; it transfers those days out of the previous year.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policy_id\": \"{{leave_policy_id}}\",\n  \"year\": 2026,\n  \"credited\": 12,\n  \"carry_forward\": 0,\n  \"reason\": \"Reviewed annual entitlement\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('leave_balance_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Adjust leave balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/balances/{{leave_balance_id}}/adjustments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "balances",
+                "{{leave_balance_id}}",
+                "adjustments"
+              ]
+            },
+            "description": "leave.manage. Positive or negative adjustment; available balance cannot go negative. Keep the same operation_id for a retry of the exact same operation; choose a fresh UUID for every new adjustment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"units\": 1,\n  \"reason\": \"Reviewed balance correction\",\n  \"operation_id\": \"{{leave_adjustment_operation_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Balance movement history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/balances/{{leave_balance_id}}/entries?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "balances",
+                "{{leave_balance_id}}",
+                "entries"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Calculate leave application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "preview"
+              ]
+            },
+            "description": "leave.self. Read-only calculation, including balance and overlap validation. Requires assigned policy and a work schedule. Dates must be within one calendar year. For a single half-day set both start_half and end_half to am or pm. Multi-day ranges can start pm and end am.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policy_id\": \"{{leave_policy_id}}\",\n  \"start_date\": \"{{leave_start_date}}\",\n  \"end_date\": \"{{leave_end_date}}\",\n  \"start_half\": \"full\",\n  \"end_half\": \"full\",\n  \"reason\": \"Planned personal leave\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Submit leave application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests"
+              ]
+            },
+            "description": "Reserves controlled balance, snapshots policy/calendar inputs and rejects overlaps. Uncontrolled leave has no artificial balance limit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policy_id\": \"{{leave_policy_id}}\",\n  \"start_date\": \"{{leave_start_date}}\",\n  \"end_date\": \"{{leave_end_date}}\",\n  \"start_half\": \"full\",\n  \"end_half\": \"full\",\n  \"reason\": \"Planned personal leave\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('leave_request_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My leave requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests?page=1&limit=20&scope=mine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "scope",
+                  "value": "mine"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Review queue and company history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests?page=1&limit=20&scope=review&status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "scope",
+                  "value": "review"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "HR company scope or manager direct reports. Self-review is forbidden. Use the response can_review/can_cancel flags."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Approve leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests/{{leave_request_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests",
+                "{{leave_request_id}}",
+                "review"
+              ]
+            },
+            "description": "Manager/direct-report or HR. Moves reserved units to used; validates attendance conflicts and payroll locks again. Cannot approve own leave.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approved\",\n  \"comment\": \"Approved after team review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reject leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests/{{leave_request_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests",
+                "{{leave_request_id}}",
+                "review"
+              ]
+            },
+            "description": "Releases the pending reservation. Only pending requests can be reviewed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"rejected\",\n  \"comment\": \"Please discuss alternative dates\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Cancel leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/requests/{{leave_request_id}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "requests",
+                "{{leave_request_id}}",
+                "cancel"
+              ]
+            },
+            "description": "Employee can cancel own pending leave. HR can cancel pending or approved leave. Approved cancellation restores balance and removes the attendance overlay; locked payroll dates block it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Plans changed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Approved leave calendar",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/calendar?month={{leave_month}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "{{leave_month}}"
+                }
+              ]
+            },
+            "description": "Employee own scope, manager direct reports or HR company scope. Only approved chargeable dates; excludes sensitive leave reasons, categories and paid flags."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Leave workflows with tenant isolation and audited balance movements. Run deliberately with the required employee/reviewer/HR identity. Initialize policies and entitlements before applying."
+    },
+    {
+      "name": "11 — Payroll and payslips",
+      "item": [
+        {
+          "name": "Payroll calculation settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "settings"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update payroll calculation settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "settings"
+              ]
+            },
+            "description": "payroll.manage. Default is off. Set true only when HR enables approved unpaid-leave deductions. Applies to NEW runs; existing runs retain their saved setting. Fixed components and calendar-day proration; no automatic statutory rates.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unpaid_leave_deduction\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employees for salary assignment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/people?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "people"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employee salary history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/employees/{{employee_id}}/salaries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "employees",
+                "{{employee_id}}",
+                "salaries"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create salary revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/employees/{{employee_id}}/salaries",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "employees",
+                "{{employee_id}}",
+                "salaries"
+              ]
+            },
+            "description": "Monthly amounts are DECIMAL STRINGS, not JSON numbers. Use active same-company earning/deduction component IDs. New revisions must follow the latest effective date; the previous revision closes automatically. Dates affecting locked payroll are rejected.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"effective_from\": \"{{salary_effective_date}}\",\n  \"lines\": [\n    {\n      \"component_id\": \"{{salary_component_id}}\",\n      \"amount\": \"30000.00\"\n    }\n  ],\n  \"reason\": \"Approved monthly salary\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('salary_structure_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Correct salary amounts",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/salaries/{{salary_structure_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "salaries",
+                "{{salary_structure_id}}"
+              ]
+            },
+            "description": "Replaces the component allocation within the same effective dates. Removed lines retain zero amounts. Cannot affect a locked period; existing unlocked payroll requires recalculation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lines\": [\n    {\n      \"component_id\": \"{{salary_component_id}}\",\n      \"amount\": \"30000.00\"\n    }\n  ],\n  \"reason\": \"Correct reviewed salary allocation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List payroll runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create monthly payroll run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs"
+              ]
+            },
+            "description": "One run per calendar month. Copies currency and unpaid-leave configuration. Assign employee salaries before calculation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"month\": \"{{payroll_month}}\",\n  \"pay_date\": \"{{payroll_pay_date}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('payroll_run_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Payroll run details — refresh revision",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}"
+              ]
+            },
+            "description": "Run before EVERY calculation/adjustment/review/lock/publish after a mutation. Captures the current revision and version, preventing approval from a stale screen. Choose payroll_employee_id from current items; it is a payroll item UUID, not the employee profile UUID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.set('payroll_revision_id', data.run.calculation_config.revision); pm.environment.set('payroll_calculation_version', data.run.calculation_version); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Previous payroll calculation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/versions/{{payroll_history_version}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "versions",
+                "{{payroll_history_version}}"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Calculate or recalculate payroll",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/calculate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "calculate"
+              ]
+            },
+            "description": "Creates a retained calculation version. Explicitly set discard_adjustments=true if replacing a version containing nonzero manual adjustments. Missing salary coverage aborts the entire calculation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"discard_adjustments\": false,\n  \"reason\": \"Calculate reviewed salary inputs\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Add manual payroll adjustment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/employees/{{payroll_employee_id}}/adjustments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "employees",
+                "{{payroll_employee_id}}",
+                "adjustments"
+              ]
+            },
+            "description": "payroll_employee_id is the current payroll item. Reuse operation_id only for a retry of the identical action; use a new UUID for every distinct adjustment. Amounts are decimal strings. Changing amounts clears review.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\",\n  \"operation_id\": \"{{payroll_adjustment_operation_id}}\",\n  \"name\": \"Reviewed bonus\",\n  \"kind\": \"earning\",\n  \"amount\": \"100.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('payroll_adjustment_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit or void manual adjustment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/adjustments/{{payroll_adjustment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "adjustments",
+                "{{payroll_adjustment_id}}"
+              ]
+            },
+            "description": "Refresh the run revision and enter the current expected_amount. Set amount=0.00 to void a manual line while retaining history. Cannot edit generated lines or old calculation versions.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\",\n  \"expected_amount\": \"100.00\",\n  \"amount\": \"0.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mark payroll reviewed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "review"
+              ]
+            },
+            "description": "Requires calculated status and unchanged salary/employment/unpaid-leave inputs. Refresh run details after success.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Lock reviewed payroll",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/lock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "lock"
+              ]
+            },
+            "description": "Irreversible through this release. Month must have ended; resolve pending leave and attendance corrections first. Rechecks current inputs and freezes the period against attendance/leave changes. Refresh run details after success.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Publish private payslip PDFs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/publish",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "publish"
+              ]
+            },
+            "description": "Locked runs only. Generates files in private PAYSLIP_STORAGE_DIR. Requires persistent storage; non-ASCII names require PAYSLIP_FONT_PATH. Repeat publication is idempotent. Does not pay employees or send email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My published payslips",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payslips/me?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payslips",
+                "me"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "payslips.read.self. Only the linked employee’s own published/locked payslips. Choose payslip_id from the list; HR can also use a published current payroll item ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "View published payslip",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payslips/{{payslip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payslips",
+                "{{payslip_id}}"
+              ]
+            },
+            "description": "Employee owner or payroll.manage. Returns only the pay statement, excluding private file keys and full calculation inputs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Download private payslip PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payslips/{{payslip_id}}/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payslips",
+                "{{payslip_id}}",
+                "download"
+              ]
+            },
+            "description": "Authenticated binary application/pdf response with no-store caching. Use Postman Save Response / Send and Download. Owner or payroll.manage only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Monthly payroll workflow. Refresh run details between mutations to update revision/version variables. Monetary request values must be strings. Earlier calculations are retained; locking has no undo endpoint."
     }
   ]
 }

@@ -1,0 +1,115 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">PAY STATEMENTS</span>
+      <h1>{{ id ? 'Payslip' : 'My payslips' }}</h1>
+      <p>Published statements from locked payroll.</p>
+    </div>
+    @if (id) {
+      <a mat-stroked-button routerLink="/payroll/payslips">My payslips</a>
+    }
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (data(); as slip) {
+    <section class="panel payslip">
+      <div class="heading-row">
+        <div>
+          <h2>{{ slip.company_name }}</h2>
+          <p>{{ slip.employee?.name }} · {{ slip.employee?.employee_code }}</p>
+        </div>
+        <button mat-flat-button (click)="download(slip.id)" [disabled]="downloading()">
+          Download PDF
+        </button>
+      </div>
+      <p class="muted">
+        {{ slip.period_start }} to {{ slip.period_end }} · Pay date {{ slip.pay_date }} ·
+        {{ slip.currency }}
+      </p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Type</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of slip.lines; track $index) {
+              <tr>
+                <td>{{ line.name }}</td>
+                <td>{{ line.kind }}</td>
+                <td>{{ line.amount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="summary-grid">
+        <div>
+          <span>Gross</span><strong>{{ slip.gross }}</strong>
+        </div>
+        <div>
+          <span>Deductions</span><strong>{{ slip.deductions }}</strong>
+        </div>
+        <div>
+          <span>Net pay</span><strong>{{ slip.currency }} {{ slip.net }}</strong>
+        </div>
+      </div>
+      <p class="muted">This statement does not confirm bank payment.</p>
+    </section>
+  }
+  @if (!id) {
+    <section class="panel table-panel">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Pay date</th>
+              <th>Gross</th>
+              <th>Deductions</th>
+              <th>Net</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (slip of rows(); track slip.id) {
+              <tr>
+                <td>{{ slip.period_start.slice(0, 7) }}</td>
+                <td>{{ slip.pay_date }}</td>
+                <td>{{ slip.gross }}</td>
+                <td>{{ slip.deductions }}</td>
+                <td>{{ slip.currency }} {{ slip.net }}</td>
+                <td>
+                  <a mat-button [routerLink]="['/payroll/payslips', slip.id]">View</a
+                  ><button mat-button (click)="download(slip.id)" [disabled]="downloading()">
+                    Download PDF
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty-state">
+                  No published payslips are available for your account.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button mat-button (click)="step(-1)" [disabled]="page === 1 || loading()">Previous</button
+        ><span>Page {{ page }}</span
+        ><button mat-button (click)="step(1)" [disabled]="page * 20 >= total || loading()">
+          Next
+        </button>
+      </div>
+    </section>
+  }
+</section>

@@ -56,20 +56,25 @@ export class AttendanceRegularizationService {
         now,
       );
       const id = randomUUID();
-      await this.attendance.leave.checkWrite(manager,actor.tenantId!,employee.id,dto.work_date,start,end);
-      await manager
-        .getRepository(AttendanceRegularization)
-        .insert({
-          id,
-          tenant_id: actor.tenantId,
-          employee_id: employee.id,
-          work_date: dto.work_date,
-          requested_check_in: start,
-          requested_check_out: end,
-          reason: dto.reason,
-          original_values: { attendance: attendanceBaseline(current), rules },
-          status: 'pending',
-        });
+      await this.attendance.leave.checkWrite(
+        manager,
+        actor.tenantId!,
+        employee.id,
+        dto.work_date,
+        start,
+        end,
+      );
+      await manager.getRepository(AttendanceRegularization).insert({
+        id,
+        tenant_id: actor.tenantId,
+        employee_id: employee.id,
+        work_date: dto.work_date,
+        requested_check_in: start,
+        requested_check_out: end,
+        reason: dto.reason,
+        original_values: { attendance: attendanceBaseline(current), rules },
+        status: 'pending',
+      });
       await this.attendance.audit(
         manager,
         actor,
@@ -224,17 +229,15 @@ export class AttendanceRegularizationService {
           String(request.reason),
         );
       }
-      await manager
-        .getRepository(AttendanceRegularization)
-        .update(
-          { tenant_id: actor.tenantId, id },
-          {
-            status: dto.decision,
-            reviewer_id: actor.id,
-            reviewed_at: now,
-            review_comment: dto.comment ?? null,
-          },
-        );
+      await manager.getRepository(AttendanceRegularization).update(
+        { tenant_id: actor.tenantId, id },
+        {
+          status: dto.decision,
+          reviewer_id: actor.id,
+          reviewed_at: now,
+          review_comment: dto.comment ?? null,
+        },
+      );
       await this.attendance.audit(
         manager,
         actor,

@@ -40,6 +40,19 @@ export class AdminLayout {
       label: 'WORKSPACE',
       items: [
         { label: 'Overview', path: '/company/overview', icon: 'grid', permission: '' },
+        { label: 'Payroll', path: '/payroll', icon: 'wallet', permission: 'payroll.manage' },
+        {
+          label: 'My payslips',
+          path: '/payroll/payslips',
+          icon: 'document',
+          permission: 'payslips.read.self',
+        },
+        {
+          label: 'Leave',
+          path: '/leave',
+          icon: 'calendar',
+          permission: 'leave.self|leave.manage|leave.approve.team',
+        },
         {
           label: 'Attendance',
           path: '/attendance',
@@ -158,6 +171,17 @@ export class AdminLayout {
       .filter((section) => section.items.length);
   }
   title() {
+    if (this.router.url.startsWith('/payroll/payslips')) return 'Payslips';
+    if (
+      this.router.url.startsWith('/payroll/runs') ||
+      this.router.url.startsWith('/payroll/salaries')
+    )
+      return 'Payroll';
+    if (
+      this.router.url.startsWith('/leave/requests') ||
+      this.router.url.startsWith('/leave/calendar')
+    )
+      return 'Leave';
     if (this.router.url.startsWith('/attendance')) return 'Attendance';
     if (this.router.url.startsWith('/employees'))
       return this.router.url === '/employees/me' ? 'My profile' : 'Employees';
@@ -170,6 +194,13 @@ export class AdminLayout {
   }
   isActive(path: string) {
     const current = this.router.url.split('?')[0];
+    if (path === '/payroll')
+      return (
+        current === path || current.startsWith('/payroll/runs/') || current === '/payroll/salaries'
+      );
+    if (path === '/payroll/payslips') return current === path || current.startsWith(path + '/');
+    if (path === '/leave')
+      return ['/leave', '/leave/requests', '/leave/calendar'].includes(current);
     if (path === '/employees')
       return current === path || (current.startsWith('/employees/') && current !== '/employees/me');
     return current === path;

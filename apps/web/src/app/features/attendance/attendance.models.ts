@@ -1,4 +1,5 @@
 export interface AttendanceDay {
+  leave_units?: number;
   id: string | null;
   work_date: string;
   check_in: string | null;

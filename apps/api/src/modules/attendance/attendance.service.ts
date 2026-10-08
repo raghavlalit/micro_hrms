@@ -72,16 +72,14 @@ export class AttendanceService {
     action: string,
     metadata: object,
   ) {
-    await manager
-      .getRepository(AuditLog)
-      .insert({
-        tenant_id: actor.tenantId,
-        actor_id: actor.id,
-        entity_type: 'attendance',
-        entity_id: id,
-        action,
-        metadata,
-      });
+    await manager.getRepository(AuditLog).insert({
+      tenant_id: actor.tenantId,
+      actor_id: actor.id,
+      entity_type: 'attendance',
+      entity_id: id,
+      action,
+      metadata,
+    });
   }
   people(actor: Principal, dto: AttendancePeopleDto) {
     if (!this.policy.reviews(actor))
@@ -150,9 +148,17 @@ export class AttendanceService {
         dates[dates.length - 1],
       );
       const active = ['active', 'on_notice'].includes(employee.status);
-      const approvedLeave = await this.leave.approved(manager,actor.tenantId!,employee.id,dates[0],dates[dates.length-1]);
+      const approvedLeave = await this.leave.approved(
+        manager,
+        actor.tenantId!,
+        employee.id,
+        dates[0],
+        dates[dates.length - 1],
+      );
       const items = dates.map((date) => {
-        const leaveUnits = approvedLeave.filter(day=>day.date===date).reduce((sum,day)=>sum+day.units,0);
+        const leaveUnits = approvedLeave
+          .filter((day) => day.date === date)
+          .reduce((sum, day) => sum + day.units, 0);
         const row = records.find((record) => record.work_date === date);
         const rules = row?.source_metadata?.rules ?? {
           ...schedule,
@@ -181,10 +187,19 @@ export class AttendanceService {
           work_date: date,
           check_in: row ? iso(row.check_in) : null,
           check_out: row ? iso(row.check_out) : null,
-          status: leaveUnits === 1 ? 'leave' : leaveUnits === 0.5 && (!row || row.status === 'absent') ? 'half_day' : status,
+          status:
+            leaveUnits === 1
+              ? 'leave'
+              : leaveUnits === 0.5 && (!row || row.status === 'absent')
+                ? 'half_day'
+                : status,
           leave_units: leaveUnits,
           worked_minutes: row?.worked_minutes ?? 0,
-          late_minutes: row?.source_metadata?.late_minutes ?? 0,
+          late_minutes: this.leave.lateMinutes(
+            approvedLeave.filter((day) => day.date === date),
+            row?.check_in ?? null,
+            row?.source_metadata?.late_minutes ?? 0,
+          ),
           source: row?.source ?? 'calendar',
           timezone: rules.timezone,
           schedule_name: rules.schedule_name,
@@ -223,8 +238,15 @@ export class AttendanceService {
       const own =
         employee.user_id === actor.id &&
         actor.permissions.includes('attendance.self');
-      const todayLeave = await this.leave.approved(manager,actor.tenantId!,employee.id,today,today);
-      const fullDayLeave = todayLeave.reduce((sum,day)=>sum+day.units,0) >= 1;
+      const todayLeave = await this.leave.approved(
+        manager,
+        actor.tenantId!,
+        employee.id,
+        today,
+        today,
+      );
+      const fullDayLeave =
+        todayLeave.reduce((sum, day) => sum + day.units, 0) >= 1;
       const workDateEligible =
         today >= employee.joining_date &&
         (!employee.termination_date || today <= employee.termination_date);
@@ -321,7 +343,14 @@ export class AttendanceService {
     forcedStatus?: string,
     action = source,
   ) {
-    await this.leave.checkWrite(manager,actor.tenantId!,employee.id,date,start,end);
+    await this.leave.checkWrite(
+      manager,
+      actor.tenantId!,
+      employee.id,
+      date,
+      start,
+      end,
+    );
     const previous = await this.repository.day(
       manager,
       actor.tenantId!,
@@ -350,15 +379,13 @@ export class AttendanceService {
         .getRepository(Attendance)
         .update({ tenant_id: actor.tenantId, id }, values);
     else
-      await manager
-        .getRepository(Attendance)
-        .insert({
-          id,
-          tenant_id: actor.tenantId,
-          employee_id: employee.id,
-          work_date: date,
-          ...values,
-        });
+      await manager.getRepository(Attendance).insert({
+        id,
+        tenant_id: actor.tenantId,
+        employee_id: employee.id,
+        work_date: date,
+        ...values,
+      });
     const saved = await this.repository.day(
       manager,
       actor.tenantId!,

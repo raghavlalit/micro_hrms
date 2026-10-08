@@ -47,7 +47,13 @@ HR/company administrators can review company attendance and make audited adjustm
   Existing locked payroll periods block attendance changes. Future payroll locking
   workflows must use the same tenant lock to serialize against attendance writes.
 - Attendance changes and correction decisions are audited. Notifications,
-  scheduled absence processing, leave balances and payroll calculation are separate topics.
+  scheduled absence processing and payroll calculation are separate topics.
+
+Approved leave now overlays the calendar without rewriting recorded times.
+Full-day leave blocks time changes; half-day work must stay in the remaining half
+of the saved shift. Approved AM leave moves the lateness threshold to the shift
+midpoint plus grace. HR cancellation removes this overlay. See
+[Leave management](leave-management.md) for balances and approval rules.
 
 ## API and module ownership
 
@@ -75,7 +81,8 @@ and correction operations are separated. Angular screens, dialogs, models, API
 client and tests live in `apps/web/src/app/features/attendance`.
 
 The existing `attendance` and `attendance_regularizations` tables are reused;
-no additional migration or seed data is required. Normal environment migration
+attendance itself required no additional migration or seed data. The leave
+integration requires the new leave calculation snapshot migration. Normal environment migration
 commands remain documented in [database setup](database-setup.md).
 
 ## Postman and verification

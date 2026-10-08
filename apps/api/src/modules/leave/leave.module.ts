@@ -11,5 +11,21 @@ import { LeaveRequestService } from './leave-request.service';
 import { LeaveQueryService } from './leave-query.service';
 import { LeaveController } from './leave.controller';
 import { LeaveSettingsService } from './leave-settings.service';
-@Module({ imports: [TenantsModule,TenantContextModule,AttendanceModule,HolidaysModule,LeaveAttendanceModule], controllers: [LeaveSettingsController,LeaveController],providers:[LeaveAccess,LeaveBalanceService,LeaveRequestService,LeaveQueryService,LeaveSettingsService] })
+@Module({
+  imports: [
+    TenantsModule,
+    TenantContextModule,
+    AttendanceModule,
+    HolidaysModule,
+    LeaveAttendanceModule,
+  ],
+  controllers: [LeaveSettingsController, LeaveController],
+  providers: [
+    LeaveAccess,
+    LeaveBalanceService,
+    LeaveRequestService,
+    LeaveQueryService,
+    LeaveSettingsService,
+  ],
+})
 export class LeaveModule {}

@@ -1,0 +1,88 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">COMPENSATION</span>
+      <h1>Salary structures</h1>
+      <p>Effective-dated monthly earnings and deductions.</p>
+    </div>
+    <a mat-stroked-button routerLink="/payroll">Payroll runs</a>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  <section class="panel filters">
+    <mat-form-field appearance="outline"
+      ><mat-label>Find employee</mat-label
+      ><input matInput [(ngModel)]="search" (keyup.enter)="find()" /></mat-form-field
+    ><button mat-button (click)="find()" [disabled]="peopleBusy() || loading()">Search</button
+    ><mat-form-field appearance="outline"
+      ><mat-label>Employee</mat-label
+      ><mat-select
+        [(ngModel)]="employeeId"
+        (selectionChange)="load()"
+        [disabled]="loading() || peopleBusy()"
+      >
+        @for (person of people(); track person.id) {
+          <mat-option [value]="person.id"
+            >{{ person.name }} · {{ person.employee_code }}</mat-option
+          >
+        }
+      </mat-select></mat-form-field
+    >
+    @if (total > 50) {
+      <button mat-button (click)="step(-1)" [disabled]="page === 1 || peopleBusy()">
+        Previous employees</button
+      ><button mat-button (click)="step(1)" [disabled]="page * 50 >= total || peopleBusy()">
+        Next employees
+      </button>
+    }
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (employee(); as person) {
+    <section class="panel heading-row">
+      <div>
+        <h2>{{ person.name }}</h2>
+        <p class="muted">{{ person.employee_code }}</p>
+      </div>
+      <button mat-flat-button (click)="edit()">New salary revision</button>
+    </section>
+    @for (revision of rows(); track revision.id) {
+      <section class="panel">
+        <div class="heading-row">
+          <div>
+            <h2>{{ revision.effective_from }} to {{ revision.effective_to || 'ongoing' }}</h2>
+            <p class="muted">{{ revision.currency }} · Monthly fixed amounts</p>
+          </div>
+          <button mat-button (click)="edit(revision)">Correct amounts</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Type</th>
+                <th>Monthly amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of revision.lines; track line.component_id) {
+                <tr>
+                  <td>{{ line.name }}</td>
+                  <td>{{ line.kind }}</td>
+                  <td>{{ line.amount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    } @empty {
+      <section class="panel empty-state">
+        <h2>No salary assigned</h2>
+        <p>Add a revision covering the employment dates before calculating payroll.</p>
+      </section>
+    }
+  }
+</section>

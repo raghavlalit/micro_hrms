@@ -26,6 +26,8 @@ Start `npm.cmd run dev:api` and `npm.cmd run dev:web` in separate terminals. Pos
 - [User and role management, permissions and account safeguards](docs/user-role-management.md)
 - [Holiday calendar, applicability and date rules](docs/holiday-calendar.md)
 - [Attendance, corrections, approvals and calculation rules](docs/attendance-management.md)
+- [Leave balances, applications, approvals and annual setup](docs/leave-management.md)
+- [Payroll, salary revisions, calculations and private payslips](docs/payroll-management.md)
 - [Postman collection, environment and API testing instructions](postman/README.md)
 
 Run `npm.cmd run db:test` for real PostgreSQL migration/integrity/isolation tests, and `npm.cmd run db:smoke` for API startup verification. Tests use disposable resources and leave the development database intact.

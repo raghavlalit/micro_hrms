@@ -1,19 +1,210 @@
 <section class="page">
-<header class="page-heading"><div><span class="eyebrow">TIME OFF</span><h1>Leave management</h1><p>Plan time away and keep balances clear.</p></div><div class="actions"><a mat-stroked-button routerLink="/leave/requests">Requests & approvals</a><a mat-stroked-button routerLink="/leave/calendar">Leave calendar</a></div></header>
-@if(error()){<p class="message error" role="alert">{{error()}}</p>}@if(success()){<p class="message success" role="status">{{success()}}</p>}
-<section class="panel filters">
-@if(selfAllowed() && teamAllowed()){<mat-form-field appearance="outline"><mat-label>View</mat-label><mat-select [(ngModel)]="mode" (selectionChange)="switchMode()" [disabled]="loading()"><mat-option value="self">My leave</mat-option><mat-option value="team">Team / company</mat-option></mat-select></mat-form-field>}
-@if(mode==='team'){
-<mat-form-field appearance="outline"><mat-label>Find employee</mat-label><input matInput [(ngModel)]="search" (keyup.enter)="searchPeople()"></mat-form-field><button mat-button (click)="searchPeople()" [disabled]="peopleBusy() || loading()">Search</button>
-<mat-form-field appearance="outline"><mat-label>Employee</mat-label><mat-select [(ngModel)]="employeeId" (selectionChange)="load()" [disabled]="loading() || peopleBusy()">@for(person of people();track person.id){<mat-option [value]="person.id">{{person.name}} · {{person.employee_code}}</mat-option>}</mat-select></mat-form-field>
-@if(peopleTotal>50){<div class="actions"><button mat-button (click)="stepPeople(-1)" [disabled]="peoplePage===1 || peopleBusy() || loading()">Previous employees</button><button mat-button (click)="stepPeople(1)" [disabled]="peoplePage*50>=peopleTotal || peopleBusy() || loading()">Next employees</button></div>}}
-<mat-form-field appearance="outline"><mat-label>Leave year</mat-label><input matInput type="number" [(ngModel)]="year" min="1900" max="2200" [disabled]="loading()"></mat-form-field><button mat-flat-button (click)="load()" [disabled]="loading()">Load balances</button>
-</section>
-@if(loading()){<mat-progress-bar mode="indeterminate"/>}
-@if(data();as result){
-<section class="panel employee-heading"><div><h2>{{result.employee.name}} <span class="code">{{result.employee.employee_code}}</span></h2><p class="muted">January–December {{result.year}} · {{result.timezone}}</p></div><div class="actions">@if(mode==='self' && selfAllowed()){<button mat-flat-button (click)="apply()" [disabled]="!result.assignments.length">Apply for leave</button>}@if(manages()){<button mat-stroked-button (click)="setup()">Assign entitlement</button>}</div></section>
-<div class="balance-grid">@for(balance of result.balances;track balance.id){<article class="panel balance-card"><p class="eyebrow">{{balance.type_name}}</p><h2>{{balance.balance_controlled ? balance.available : 'No limit'}} <small>{{balance.balance_controlled ? 'days available' : ''}}</small></h2>@if(balance.balance_controlled){<dl><div><dt>Credited</dt><dd>{{balance.credited}}</dd></div><div><dt>Adjusted / carried</dt><dd>{{balance.adjusted}}</dd></div><div><dt>Used</dt><dd>{{balance.used}}</dd></div><div><dt>Pending</dt><dd>{{balance.pending}}</dd></div></dl>}@else{<p class="muted">Usage is listed in request history. No capped balance is deducted.</p>}<div class="actions"><button mat-button (click)="showLedger(balance.id)">Balance history</button>@if(manages() && balance.balance_controlled){<button mat-button (click)="setup(balance)">Adjust</button>}</div></article>}@empty{<section class="panel empty-state"><h2>No entitlement assigned</h2><p>HR must assign a policy for this employee and year before leave can be requested.</p></section>}</div>
-@if(result.assignments.length){<section class="panel"><h2>Assigned policies</h2>@for(policy of result.assignments;track policy.policy_id){<p><strong>{{policy.name}}</strong> · {{policy.is_paid ? 'Paid' : 'Unpaid'}} · {{policy.effective_from}} to {{policy.effective_to}} @if(!policy.is_active){<span class="status">Inactive type</span>}</p>}</section>}
-}
-@if(ledger();as entries){<section class="panel"><div class="employee-heading"><h2>Balance history</h2><button mat-button (click)="ledger.set(null)">Close history</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>When</th><th>Entry</th><th>Days</th><th>Reason</th></tr></thead><tbody>@for(entry of entries;track entry.id){<tr><td>{{entry.created_at | date:'medium'}}</td><td>{{entry.kind}}</td><td>{{entry.units}}</td><td class="reason">{{entry.reason}}</td></tr>}@empty{<tr><td colspan="4">No balance movements yet.</td></tr>}</tbody></table></div><div class="pagination"><button mat-button (click)="showLedger(ledgerId,ledgerPage-1)" [disabled]="ledgerPage===1 || ledgerBusy()">Previous</button><span>Page {{ledgerPage}}</span><button mat-button (click)="showLedger(ledgerId,ledgerPage+1)" [disabled]="ledgerPage*20>=ledgerTotal || ledgerBusy()">Next</button></div></section>}
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">TIME OFF</span>
+      <h1>Leave management</h1>
+      <p>Plan time away and keep balances clear.</p>
+    </div>
+    <div class="actions">
+      <a mat-stroked-button routerLink="/leave/requests">Requests & approvals</a
+      ><a mat-stroked-button routerLink="/leave/calendar">Leave calendar</a>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="message success" role="status">{{ success() }}</p>
+  }
+  <section class="panel filters">
+    @if (selfAllowed() && teamAllowed()) {
+      <mat-form-field appearance="outline"
+        ><mat-label>View</mat-label
+        ><mat-select [(ngModel)]="mode" (selectionChange)="switchMode()" [disabled]="loading()"
+          ><mat-option value="self">My leave</mat-option
+          ><mat-option value="team">Team / company</mat-option></mat-select
+        ></mat-form-field
+      >
+    }
+    @if (mode === 'team') {
+      <mat-form-field appearance="outline"
+        ><mat-label>Find employee</mat-label
+        ><input matInput [(ngModel)]="search" (keyup.enter)="searchPeople()" /></mat-form-field
+      ><button mat-button (click)="searchPeople()" [disabled]="peopleBusy() || loading()">
+        Search
+      </button>
+      <mat-form-field appearance="outline"
+        ><mat-label>Employee</mat-label
+        ><mat-select
+          [(ngModel)]="employeeId"
+          (selectionChange)="load()"
+          [disabled]="loading() || peopleBusy()"
+        >
+          @for (person of people(); track person.id) {
+            <mat-option [value]="person.id"
+              >{{ person.name }} · {{ person.employee_code }}</mat-option
+            >
+          }
+        </mat-select></mat-form-field
+      >
+      @if (peopleTotal > 50) {
+        <div class="actions">
+          <button
+            mat-button
+            (click)="stepPeople(-1)"
+            [disabled]="peoplePage === 1 || peopleBusy() || loading()"
+          >
+            Previous employees</button
+          ><button
+            mat-button
+            (click)="stepPeople(1)"
+            [disabled]="peoplePage * 50 >= peopleTotal || peopleBusy() || loading()"
+          >
+            Next employees
+          </button>
+        </div>
+      }
+    }
+    <mat-form-field appearance="outline"
+      ><mat-label>Leave year</mat-label
+      ><input
+        matInput
+        type="number"
+        [(ngModel)]="year"
+        min="1900"
+        max="2200"
+        [disabled]="loading()" /></mat-form-field
+    ><button mat-flat-button (click)="load()" [disabled]="loading()">Load balances</button>
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (data(); as result) {
+    <section class="panel employee-heading">
+      <div>
+        <h2>
+          {{ result.employee.name }} <span class="code">{{ result.employee.employee_code }}</span>
+        </h2>
+        <p class="muted">January–December {{ result.year }} · {{ result.timezone }}</p>
+      </div>
+      <div class="actions">
+        @if (mode === 'self' && selfAllowed()) {
+          <button mat-flat-button (click)="apply()" [disabled]="!result.assignments.length">
+            Apply for leave
+          </button>
+        }
+        @if (manages()) {
+          <button mat-stroked-button (click)="setup()">Assign entitlement</button>
+        }
+      </div>
+    </section>
+    <div class="balance-grid">
+      @for (balance of result.balances; track balance.id) {
+        <article class="panel balance-card">
+          <p class="eyebrow">{{ balance.type_name }}</p>
+          <h2>
+            {{ balance.balance_controlled ? balance.available : 'No limit' }}
+            <small>{{ balance.balance_controlled ? 'days available' : '' }}</small>
+          </h2>
+          @if (balance.balance_controlled) {
+            <dl>
+              <div>
+                <dt>Credited</dt>
+                <dd>{{ balance.credited }}</dd>
+              </div>
+              <div>
+                <dt>Adjusted / carried</dt>
+                <dd>{{ balance.adjusted }}</dd>
+              </div>
+              <div>
+                <dt>Used</dt>
+                <dd>{{ balance.used }}</dd>
+              </div>
+              <div>
+                <dt>Pending</dt>
+                <dd>{{ balance.pending }}</dd>
+              </div>
+            </dl>
+          } @else {
+            <p class="muted">Usage is listed in request history. No capped balance is deducted.</p>
+          }
+          <div class="actions">
+            <button mat-button (click)="showLedger(balance.id)">Balance history</button>
+            @if (manages() && balance.balance_controlled) {
+              <button mat-button (click)="setup(balance)">Adjust</button>
+            }
+          </div>
+        </article>
+      } @empty {
+        <section class="panel empty-state">
+          <h2>No entitlement assigned</h2>
+          <p>HR must assign a policy for this employee and year before leave can be requested.</p>
+        </section>
+      }
+    </div>
+    @if (result.assignments.length) {
+      <section class="panel">
+        <h2>Assigned policies</h2>
+        @for (policy of result.assignments; track policy.policy_id) {
+          <p>
+            <strong>{{ policy.name }}</strong> · {{ policy.is_paid ? 'Paid' : 'Unpaid' }} ·
+            {{ policy.effective_from }} to {{ policy.effective_to }}
+            @if (!policy.is_active) {
+              <span class="status">Inactive type</span>
+            }
+          </p>
+        }
+      </section>
+    }
+  }
+  @if (ledger(); as entries) {
+    <section class="panel">
+      <div class="employee-heading">
+        <h2>Balance history</h2>
+        <button mat-button (click)="ledger.set(null)">Close history</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Entry</th>
+              <th>Days</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of entries; track entry.id) {
+              <tr>
+                <td>{{ entry.created_at | date: 'medium' }}</td>
+                <td>{{ entry.kind }}</td>
+                <td>{{ entry.units }}</td>
+                <td class="reason">{{ entry.reason }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4">No balance movements yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button
+          mat-button
+          (click)="showLedger(ledgerId, ledgerPage - 1)"
+          [disabled]="ledgerPage === 1 || ledgerBusy()"
+        >
+          Previous</button
+        ><span>Page {{ ledgerPage }}</span
+        ><button
+          mat-button
+          (click)="showLedger(ledgerId, ledgerPage + 1)"
+          [disabled]="ledgerPage * 20 >= ledgerTotal || ledgerBusy()"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  }
 </section>

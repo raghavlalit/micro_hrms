@@ -1,0 +1,77 @@
+<h2 mat-dialog-title>{{ data.revision ? 'Correct salary amounts' : 'New salary revision' }}</h2>
+<form #form="ngForm" (ngSubmit)="save(form)">
+  <mat-dialog-content
+    ><p>{{ data.name }}</p>
+    <p class="muted">
+      Monthly fixed amounts. Effective dates prorate calendar days; statutory rates are entered
+      explicitly.
+    </p>
+    @if (error()) {
+      <p class="message error" role="alert">{{ error() }}</p>
+    }
+    @if (!data.revision) {
+      <mat-form-field appearance="outline"
+        ><mat-label>Effective from</mat-label
+        ><input matInput type="date" name="effective" [(ngModel)]="effectiveFrom" required
+      /></mat-form-field>
+    }
+    <div class="salary-lines">
+      @for (line of lines; track $index; let i = $index) {
+        <div class="salary-line">
+          <mat-form-field appearance="outline"
+            ><mat-label>Component {{ i + 1 }}</mat-label
+            ><mat-select [name]="'component' + i" [(ngModel)]="line.component_id" required>
+              @for (component of components(); track component.id) {
+                <mat-option [value]="component.id"
+                  >{{ component.name }} · {{ component.kind }}</mat-option
+                >
+              }
+            </mat-select></mat-form-field
+          ><mat-form-field appearance="outline"
+            ><mat-label>Monthly amount {{ i + 1 }}</mat-label
+            ><input
+              matInput
+              inputmode="decimal"
+              [name]="'amount' + i"
+              [(ngModel)]="line.amount"
+              pattern="\d{1,12}(\.\d{1,2})?"
+              required /></mat-form-field
+          ><button
+            mat-button
+            type="button"
+            (click)="lines.splice(i, 1)"
+            [disabled]="busy() || lines.length === 1"
+            [attr.aria-label]="'Remove component ' + (i + 1)"
+          >
+            Remove
+          </button>
+        </div>
+      }
+    </div>
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="add()"
+      [disabled]="busy() || lines.length >= 50"
+    >
+      Add component
+    </button>
+    <mat-form-field appearance="outline" class="full-width"
+      ><mat-label>Reason</mat-label
+      ><textarea
+        matInput
+        name="reason"
+        [(ngModel)]="reason"
+        rows="2"
+        required
+        minlength="3"
+        maxlength="500"
+      ></textarea>
+    </mat-form-field> </mat-dialog-content
+  ><mat-dialog-actions align="end"
+    ><button mat-button type="button" mat-dialog-close [disabled]="busy()">Close</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      Save salary
+    </button></mat-dialog-actions
+  >
+</form>

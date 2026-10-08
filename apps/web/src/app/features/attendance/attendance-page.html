@@ -209,6 +209,9 @@
                         Correct
                       </button>
                     }
+                    @if (day.leave_units) {
+                      <div class="record-code">Approved leave: {{ day.leave_units }} day</div>
+                    }
                     @if (day.can_adjust) {
                       <button
                         mat-button

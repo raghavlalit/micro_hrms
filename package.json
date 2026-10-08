@@ -6,6 +6,8 @@
     "apps/*"
   ],
   "scripts": {
+    "payroll:test": "npm run build:api && node apps/api/test/payroll.integration.cjs",
+    "leave:test": "npm run build:api && node apps/api/test/leave.integration.cjs",
     "attendance:test": "npm run build:api && node apps/api/test/attendance.integration.cjs",
     "holidays:test": "npm run build:api && node apps/api/test/holidays.integration.cjs",
     "postman:generate": "node scripts/generate-postman.cjs",

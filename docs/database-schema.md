@@ -60,11 +60,19 @@ Every tenant relationship also carries `tenant_id`. Foreign keys cannot point to
 
 The initial trial plan, INR, Asia/Kolkata, Monday-Friday schedule and 100-person limits are configurable starting defaults, not approved commercial rules. No tenant, employee or default password is seeded. Tenant roles and their permission assignments should be provisioned atomically during company registration; the migration seeds only global permission definitions and the trial plan.
 
-The schema deliberately does not implement attendance thresholds/calculation, leave accrual/carry-forward, holiday precedence, reporting hierarchy cycle checks, entitlement enforcement, salary proration or statutory payroll. Finalize these before implementing their services.
+Attendance calculations, holiday applicability, reporting hierarchy checks and leave entitlement enforcement are implemented in their dedicated services. Leave carry-forward is an explicit audited HR transfer. Monthly salary proration and optional approved unpaid-leave deductions are implemented in [payroll management](payroll-management.md); automated accrual and statutory payroll calculations remain pending. See [leave management](leave-management.md) for the January–December rules.
+
+Migration `1791378000000-LeaveRequestCalculation` adds `leave_requests.calculation` (non-null JSONB, default `{}`). New requests snapshot charged dates/halves, policy flags, balance reference, timezone and calendar/schedule inputs. Existing requests are not silently recalculated.
 
 Service transactions must prevent overlapping salary effective periods, overlapping balance periods, overlapping payroll periods with different boundary dates, and conflicting leave requests/half-days. Uniqueness constraints alone do not prevent these overlaps. Lock the relevant employee/balance/payroll records for concurrent transitions and add exclusion constraints in a future migration once the exact policy is agreed.
 
-Locked payroll is immutable in this initial implementation. An explicit audited unlock/correction workflow, if approved, requires an additional migration and service design. Publish payslips only for locked payroll and verify employee ownership in the API; schema relationships alone do not authorize downloads. Payroll aggregate reconciliation against individual lines, document visibility and manager/self access also require service-level checks.
+Locked payroll is immutable. An audited post-lock correction workflow requires additional service design. Payroll services now reconcile totals, publish only locked snapshots and enforce payslip ownership. Document-library visibility remains separate work.
+
+Migration `1791385000000-PayrollVersions` adds integer `calculation_version` to
+`payroll_runs` (default 0) and `payroll_employees` (default 1), both non-null. The
+employee snapshot unique key is now `(tenant_id, payroll_run_id, employee_id,
+calculation_version)`. Existing foreign keys remain unchanged. The migration also
+grants the runtime role column-level `UPDATE(settings)` on `tenants`.
 
 `updated_at` is managed by TypeORM on ORM updates. Raw SQL writers must set it explicitly. Audit metadata must be sanitized by the application before insertion.
 
