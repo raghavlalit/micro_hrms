@@ -32,8 +32,9 @@
     }
     @if (data.action === 'publish') {
       <p>
-        Generate private PDF payslips from the locked calculation and make them available to the
-        employees. This does not transfer money or send email.
+        Queue private PDF generation from the locked calculation. All payslips become available
+        together after generation completes. Employees receive the configured publication alerts.
+        This does not transfer money.
       </p>
     }
     @if (data.action === 'adjust') {

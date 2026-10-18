@@ -1,0 +1,82 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">BACKGROUND EXPORTS</p>
+      <h1>My exports</h1>
+      <p>Track your CSV exports and download completed files within 24 hours.</p>
+    </div>
+    <div class="actions">
+      <a mat-button routerLink="/reports">Back to reports</a
+      ><button mat-stroked-button (click)="load()" [disabled]="busy()">Refresh</button>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message" role="status">{{ notice() }}</p>
+  }
+  <section class="panel">
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Updating exports" />
+    }
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Background report exports">
+      <table>
+        <thead>
+          <tr>
+            <th>Report</th>
+            <th>Requested</th>
+            <th>Status</th>
+            <th>Rows</th>
+            <th>Expires</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (job of rows(); track job.id) {
+            <tr>
+              <td>{{ label(job) }}</td>
+              <td>{{ job.created_at | date: 'short' }}</td>
+              <td>
+                {{ job.status }}
+                @if (job.error_code) {
+                  <p class="job-error">{{ failure(job.error_code) }}</p>
+                }
+              </td>
+              <td>{{ job.status === 'completed' ? job.completed_units : '—' }}</td>
+              <td>{{ job.expires_at ? (job.expires_at | date: 'short') : '—' }}</td>
+              <td>
+                @if (job.status === 'completed') {
+                  <button mat-button (click)="download(job)" [disabled]="busy()">
+                    Download CSV
+                  </button>
+                }
+                @if (job.status === 'failed') {
+                  <button mat-button (click)="retry(job)" [disabled]="busy()">Retry export</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!busy() && !rows().length && !error()) {
+      <div class="empty-state">
+        <h2>No exports yet</h2>
+        <p>Open Reports, apply filters, then choose Queue CSV export.</p>
+      </div>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page - 1"
+      [pageSize]="20"
+      [disabled]="busy()"
+      (page)="page = $event.pageIndex + 1; load()"
+      aria-label="Export pages"
+    />
+  </section>
+  <p class="muted">
+    Status refreshes every 10 seconds. Downloads require your current report and employee access.
+    Queued exports support up to 100,000 rows and 50 MiB.
+  </p>
+</main>

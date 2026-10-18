@@ -45,6 +45,18 @@ const records: Record<string, MasterConfig> = {
       { key: 'exclude_non_working_days', label: 'Exclude non-working days', type: 'checkbox' },
       { key: 'effective_from', label: 'Effective from', type: 'date', required: true },
       { key: 'effective_to', label: 'Effective to (optional)', type: 'date' },
+      {
+        key: 'applicability.department_id',
+        label: 'Department (all when empty)',
+        type: 'select',
+        lookup: 'leave/assignments/departments',
+      },
+      {
+        key: 'applicability.location_id',
+        label: 'Location (all when empty)',
+        type: 'select',
+        lookup: 'leave/assignments/locations',
+      },
     ],
     defaults: {
       name: '',
@@ -56,6 +68,7 @@ const records: Record<string, MasterConfig> = {
       exclude_non_working_days: true,
       effective_from: '',
       effective_to: null,
+      applicability: { department_id: null, location_id: null },
     },
   },
 };
@@ -79,6 +92,18 @@ const leaveGuard: CanActivateFn = () => {
 export const routes: Routes = [
   {
     path: '',
+    pathMatch: 'full',
+    canActivate: [leaveGuard],
+    loadComponent: () => import('./leave-assignment-page').then((m) => m.LeaveAssignmentPage),
+  },
+  {
+    path: 'employees/:id',
+    canActivate: [sessionGuard],
+    data: { scope: 'tenant', permission: 'leave.manage' },
+    loadComponent: () => import('./leave-page').then((m) => m.LeavePage),
+  },
+  {
+    path: 'balances',
     canActivate: [leaveGuard],
     loadComponent: () => import('./leave-page').then((m) => m.LeavePage),
   },

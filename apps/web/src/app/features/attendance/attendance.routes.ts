@@ -23,6 +23,17 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [attendanceGuard],
+    loadComponent: () =>
+      import('./attendance-directory-page').then((m) => m.AttendanceDirectoryPage),
+  },
+  {
+    path: 'me',
+    canActivate: [attendanceGuard],
+    loadComponent: () => import('./attendance-page').then((m) => m.AttendancePage),
+  },
+  {
+    path: 'employees/:id',
+    canActivate: [attendanceGuard],
     loadComponent: () => import('./attendance-page').then((m) => m.AttendancePage),
   },
   {

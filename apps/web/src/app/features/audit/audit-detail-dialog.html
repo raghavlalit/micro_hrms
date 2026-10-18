@@ -1,0 +1,43 @@
+<h2 mat-dialog-title>Event details</h2>
+<mat-dialog-content>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading event details" />
+  }
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+    <button mat-button (click)="load()">Retry</button>
+  }
+  @if (event(); as item) {
+    <p class="detail-action">{{ label(item.action) }}</p>
+    <dl class="detail-grid">
+      <dt>Performed by</dt>
+      <dd>
+        {{ item.actor_name ?? (item.actor_id ? 'Unavailable user' : 'No tenant actor')
+        }}<small>{{ item.actor_email }}</small>
+      </dd>
+      <dt>Date / time (UTC)</dt>
+      <dd>{{ item.created_at | date: 'dd MMM yyyy, HH:mm:ss' : 'UTC' }}</dd>
+      <dt>Module</dt>
+      <dd>{{ label(item.module) }}</dd>
+      <dt>Resource type</dt>
+      <dd>{{ label(item.entity_type) }}</dd>
+      <dt>Resource ID</dt>
+      <dd class="identifier">{{ item.entity_id ?? 'Not recorded' }}</dd>
+      <dt>Event ID</dt>
+      <dd class="identifier">{{ item.id }}</dd>
+      <dt>Actor ID</dt>
+      <dd class="identifier">{{ item.actor_id ?? 'No tenant user recorded' }}</dd>
+      @for (field of item.details | keyvalue; track field.key) {
+        <dt>{{ label(field.key) }}</dt>
+        <dd>{{ field.value }}</dd>
+      }
+    </dl>
+    <p class="muted footnote">
+      This view shows selected operational details. Private reasons, credentials and salary values
+      are excluded.
+    </p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end"
+  ><button mat-stroked-button mat-dialog-close>Close</button></mat-dialog-actions
+>

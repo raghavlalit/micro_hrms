@@ -26,21 +26,25 @@
         ><mat-label>Start date</mat-label
         ><input
           matInput
-          type="date"
+          [matDatepicker]="datePicker1"
+          placeholder="YYYY-MM-DD"
           formControlName="start_date"
           [min]="data.year + '-01-01'"
           [max]="data.year + '-12-31'"
-          required
+          required /><mat-datepicker-toggle matIconSuffix [for]="datePicker1" /><mat-datepicker
+          #datePicker1
       /></mat-form-field>
       <mat-form-field appearance="outline"
         ><mat-label>End date</mat-label
         ><input
           matInput
-          type="date"
+          [matDatepicker]="datePicker2"
+          placeholder="YYYY-MM-DD"
           formControlName="end_date"
           [min]="data.year + '-01-01'"
           [max]="data.year + '-12-31'"
-          required
+          required /><mat-datepicker-toggle matIconSuffix [for]="datePicker2" /><mat-datepicker
+          #datePicker2
       /></mat-form-field>
     </div>
     <div class="form-row">

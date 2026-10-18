@@ -1,0 +1,36 @@
+# Supplemental stack; use the same built API image and runtime secrets as the API.
+# Image contract: npm workspace and compiled API at /app/apps/api/dist.
+services:
+  notification-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - notification_redis:/data
+    networks: [notification_private]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  notification-worker:
+    image: ${MICROHRMS_API_IMAGE:?Set the built API image tag}
+    working_dir: /app
+    command: ["node", "apps/api/dist/modules/notifications/worker-main.js"]
+    env_file:
+      - ${MICROHRMS_WORKER_ENV_FILE:?Set an absolute path to the worker environment file}
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      notification-redis:
+        condition: service_healthy
+    networks: [default, notification_private]
+    security_opt:
+      - no-new-privileges:true
+networks:
+  notification_private:
+    internal: true
+volumes:
+  notification_redis:

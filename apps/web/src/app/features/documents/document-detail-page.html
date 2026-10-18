@@ -1,0 +1,122 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">DOCUMENT RECORD</span>
+      <h1>Document details</h1>
+      <p>Secure downloads and retained version history.</p>
+    </div>
+    <a mat-stroked-button routerLink="/documents">Document library</a>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (data(); as doc) {
+    <section class="panel">
+      <div class="heading-row">
+        <div>
+          <h2>{{ doc.title }}</h2>
+          <p>{{ doc.employee_name }} · {{ doc.employee_code }} · {{ doc.category_name }}</p>
+        </div>
+        <span class="status">{{ doc.archived_at ? 'Archived' : 'Active' }}</span>
+      </div>
+      <dl class="metadata">
+        <div>
+          <dt>Visibility</dt>
+          <dd>
+            {{
+              doc.visibility === 'hr_only'
+                ? 'HR only'
+                : doc.visibility === 'employee'
+                  ? 'HR and employee'
+                  : 'HR, employee and permitted manager'
+            }}
+          </dd>
+        </div>
+        <div>
+          <dt>Issue date</dt>
+          <dd>{{ doc.issue_date || 'Not set' }}</dd>
+        </div>
+        <div>
+          <dt>Expiry date</dt>
+          <dd>{{ doc.expiry_date || 'No expiry' }}</dd>
+        </div>
+      </dl>
+      <div class="actions">
+        @if (manage && !doc.archived_at) {
+          <button mat-flat-button (click)="action('version')" [disabled]="loading()">
+            Upload new version</button
+          ><button mat-stroked-button (click)="action('edit')" [disabled]="loading()">
+            Edit details</button
+          ><button mat-button (click)="action('archive')" [disabled]="loading()">
+            Archive document
+          </button>
+        }
+        <button mat-button (click)="load()" [disabled]="loading()">Refresh</button>
+      </div>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title">
+        <h2>Version history</h2>
+        <p class="muted">Downloads are private and audited. Only download files you trust.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Version</th>
+              <th>File</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (version of doc.versions; track version.id) {
+              <tr>
+                <td>
+                  <strong>v{{ version.version }}</strong>
+                  <div class="muted">
+                    {{
+                      version.archived_at
+                        ? 'Archived'
+                        : version.id === current()
+                          ? 'Current'
+                          : 'Earlier'
+                    }}
+                  </div>
+                </td>
+                <td>
+                  {{ version.original_filename }}
+                  <div class="muted">{{ version.mime_type }} · {{ version.size_bytes }} bytes</div>
+                </td>
+                <td>{{ version.created_at | date: 'medium' }}</td>
+                <td>
+                  <div class="actions">
+                    <button mat-button (click)="download(version)" [disabled]="downloading()">
+                      Download v{{ version.version }}
+                    </button>
+                    @if (manage && !version.archived_at) {
+                      <button
+                        mat-button
+                        (click)="action('archive', version)"
+                        [disabled]="loading()"
+                      >
+                        Archive v{{ version.version }}
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="empty-state">No available versions.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</section>

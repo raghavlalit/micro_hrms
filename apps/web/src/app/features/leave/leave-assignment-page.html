@@ -1,0 +1,295 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">TIME OFF</span>
+      <h1>Leave assignments</h1>
+      <p>See who is ready for the year and assign missing entitlements.</p>
+    </div>
+    <div class="actions">
+      <a mat-stroked-button routerLink="/leave/balances">My / team balances</a
+      ><a mat-stroked-button routerLink="/leave/requests">Requests & approvals</a
+      ><a mat-stroked-button routerLink="/leave/policies">Leave policies</a>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="message success" role="status">{{ success() }}</p>
+  }
+  @if (data(); as result) {
+    <div class="assignment-summary">
+      @for (key of cards; track key) {
+        <article class="panel">
+          <span>{{ labels[key] }}</span
+          ><strong>{{ result.summary[key] }}</strong>
+        </article>
+      }
+    </div>
+  }
+  <form class="panel filters" (ngSubmit)="apply()">
+    <mat-form-field appearance="outline"
+      ><mat-label>Leave year</mat-label
+      ><input
+        matInput
+        type="number"
+        name="year"
+        [(ngModel)]="filters.year"
+        min="1900"
+        max="2200"
+        required
+    /></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Employee name or code</mat-label
+      ><input matInput name="search" [(ngModel)]="filters.search" maxlength="100"
+    /></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Department</mat-label
+      ><mat-select name="department" [(ngModel)]="filters.department_id"
+        ><mat-option value="">All departments</mat-option>
+        @for (row of departments(); track row.id) {
+          <mat-option [value]="row.id">{{ row.name }}</mat-option>
+        }
+      </mat-select></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Location</mat-label
+      ><mat-select name="location" [(ngModel)]="filters.location_id"
+        ><mat-option value="">All locations</mat-option>
+        @for (row of locations(); track row.id) {
+          <mat-option [value]="row.id">{{ row.name }}</mat-option>
+        }
+      </mat-select></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Leave policy</mat-label
+      ><mat-select name="policy" [(ngModel)]="filters.policy_id"
+        ><mat-option value="">All applicable leave types</mat-option>
+        @for (row of policies(); track row.id) {
+          <mat-option [value]="row.id">{{ row.name }}</mat-option>
+        }
+      </mat-select></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Assignment status</mat-label
+      ><mat-select name="status" [(ngModel)]="filters.status"
+        ><mat-option value="">All statuses</mat-option>
+        @for (key of cards.slice(1); track key) {
+          <mat-option [value]="key">{{ labels[key] }}</mat-option>
+        }
+      </mat-select></mat-form-field
+    >
+    <mat-form-field appearance="outline"
+      ><mat-label>Rows per page</mat-label
+      ><mat-select name="limit" [(ngModel)]="filters.limit"
+        ><mat-option [value]="20">20</mat-option><mat-option [value]="50">50</mat-option
+        ><mat-option [value]="100">100</mat-option></mat-select
+      ></mat-form-field
+    >
+    <button mat-flat-button type="submit" [disabled]="busy()">Apply filters</button>
+  </form>
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (data(); as result) {
+    <section class="panel">
+      <div class="employee-heading">
+        <div>
+          <h2>Employees · {{ applied.year }}</h2>
+          <p class="muted">
+            {{ result.total }} matching employees. Counts above include all statuses for the applied
+            filters.
+          </p>
+        </div>
+        <button mat-flat-button (click)="bulk()" [disabled]="!count() || busy() || count() > 10000">
+          Assign selected ({{ count() }})
+        </button>
+      </div>
+      <div class="actions selection">
+        <button
+          mat-button
+          (click)="allMatching.set(true)"
+          [disabled]="!result.total || result.total > 10000 || busy()"
+        >
+          Select all {{ result.total }} matching employees</button
+        ><button mat-button (click)="clear()">Clear selection</button>
+        @if (allMatching()) {
+          <span role="status">All matching pages selected</span>
+        }
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <mat-checkbox
+                  aria-label="Select employees on this page"
+                  [checked]="pageSelected()"
+                  (change)="selectPage($event.checked)"
+                  [disabled]="busy()"
+                />
+              </th>
+              <th>Employee</th>
+              <th>Employee code</th>
+              <th>Leave types assigned</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of result.items; track row.id) {
+              <tr>
+                <td>
+                  <mat-checkbox
+                    [aria-label]="'Select ' + row.name"
+                    [checked]="allMatching() || selected().has(row.id)"
+                    (change)="toggle(row.id, $event.checked)"
+                    [disabled]="busy()"
+                  />
+                </td>
+                <td>
+                  <strong>{{ row.name }}</strong>
+                </td>
+                <td>{{ row.employee_code }}</td>
+                <td>{{ row.assigned }} / {{ row.expected }}</td>
+                <td>
+                  <span class="assignment-status" [class.complete]="row.status === 'assigned'">{{
+                    labels[row.status]
+                  }}</span>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button
+                      mat-button
+                      (click)="assign(row)"
+                      [disabled]="row.assigned >= row.expected || busy()"
+                    >
+                      Assign leave</button
+                    ><a
+                      mat-button
+                      [routerLink]="['/leave/employees', row.id]"
+                      [queryParams]="{ year: applied.year }"
+                      >Balances / adjust</a
+                    >
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">No employees match these filters.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button mat-button (click)="page(-1)" [disabled]="applied.page === 1 || busy()">
+          Previous</button
+        ><span>Page {{ applied.page }} · {{ result.total }} employees</span
+        ><button
+          mat-button
+          (click)="page(1)"
+          [disabled]="applied.page * applied.limit >= result.total || busy()"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  }
+  @if (jobs().length) {
+    <section class="panel">
+      <div class="employee-heading">
+        <h2>Your recent assignment batches</h2>
+        <button mat-button (click)="loadJobs()">Refresh</button>
+      </div>
+      <p class="muted">
+        Progress refreshes every 5 seconds. Pending jobs need the background worker.
+      </p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Policy / credit</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th>Assigned</th>
+              <th>Skipped</th>
+              <th>Not eligible</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (batch of jobs(); track batch.id) {
+              <tr>
+                <td>{{ batch.year }}</td>
+                <td>{{ batch.policy_name }} · {{ batch.credited }} days</td>
+                <td>{{ batch.status }}</td>
+                <td>{{ batch.completed_units }} / {{ batch.total_units }}</td>
+                <td>{{ batch.counts['assigned'] }}</td>
+                <td>{{ batch.counts['skipped'] }}</td>
+                <td>{{ batch.counts['rejected'] }}</td>
+                <td>
+                  <button mat-button (click)="showJob(batch.id)">Details</button>
+                  @if (batch.status === 'failed') {
+                    <button mat-button (click)="retry(batch.id)">Retry</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+  @if (job(); as batch) {
+    <section class="panel">
+      <div class="employee-heading">
+        <h2>Batch details · {{ batch.status }}</h2>
+        <button mat-button (click)="job.set(null)">Close</button>
+      </div>
+      @if (batch.error_code) {
+        <p role="alert">
+          {{ batch.error_code }}. Review policy and account access before retrying. Completed
+          assignments are preserved.
+        </p>
+      }
+      <p>{{ batch.policy_name }} · {{ batch.credited }} days · {{ batch.year }}</p>
+      <p>Reason: {{ batch.reason }}</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of batch.items; track row.id) {
+              <tr>
+                <td>{{ row.name }} · {{ row.employee_code }}</td>
+                <td>{{ row.status }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="2">No processed employees yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button mat-button (click)="showJob(batch.id, jobPage - 1)" [disabled]="jobPage === 1">
+          Previous</button
+        ><span>Page {{ jobPage }}</span
+        ><button
+          mat-button
+          (click)="showJob(batch.id, jobPage + 1)"
+          [disabled]="jobPage * 50 >= batch.total"
+        >
+          Next
+        </button>
+      </div>
+    </section>
+  }
+</section>

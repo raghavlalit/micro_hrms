@@ -18,7 +18,7 @@ import {
   AttendanceAdjustmentDto,
   AttendanceDayParams,
   AttendanceMonthDto,
-  AttendancePeopleDto,
+  AttendanceDirectoryDto,
   AttendanceReviewDto,
   RegularizationDto,
   RegularizationListDto,
@@ -38,7 +38,7 @@ export class AttendanceController {
   }
   @Get('people') people(
     @Req() r: AuthRequest,
-    @Query() q: AttendancePeopleDto,
+    @Query() q: AttendanceDirectoryDto,
   ) {
     return this.attendance.people(r.principal, q);
   }

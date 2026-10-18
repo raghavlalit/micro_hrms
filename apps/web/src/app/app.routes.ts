@@ -4,6 +4,16 @@ import { sessionGuard } from './core/auth/session.guard';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password-page').then((m) => m.ForgotPasswordPage),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password-page').then((m) => m.ResetPasswordPage),
+  },
+  {
     path: 'activate',
     loadComponent: () => import('./features/auth/activate-page').then((m) => m.ActivatePage),
   },
@@ -11,6 +21,26 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./layouts/admin-layout').then((m) => m.AdminLayout),
     children: [
+      {
+        path: 'audit-logs',
+        canActivate: [sessionGuard],
+        data: { scope: 'tenant', permission: 'company.manage' },
+        loadComponent: () => import('./features/audit/audit-page').then((m) => m.AuditPage),
+      },
+      {
+        path: 'notifications',
+        canActivate: [sessionGuard],
+        data: { scope: 'tenant' },
+        loadComponent: () =>
+          import('./features/notifications/notification-page').then((m) => m.NotificationPage),
+      },
+      {
+        path: 'notifications/deliveries',
+        canActivate: [sessionGuard],
+        data: { scope: 'tenant', permission: 'company.manage' },
+        loadComponent: () =>
+          import('./features/notifications/delivery-page').then((m) => m.DeliveryPage),
+      },
       {
         path: 'attendance',
         loadChildren: () => import('./features/attendance/attendance.routes').then((m) => m.routes),
@@ -25,6 +55,23 @@ export const routes: Routes = [
       },
       {
         path: 'company/overview',
+        canActivate: [sessionGuard],
+        data: { scope: 'tenant' },
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+      },
+      {
+        path: 'reports',
+        canActivate: [sessionGuard],
+        data: { scope: 'tenant' },
+        loadComponent: () => import('./features/reports/report-page').then((m) => m.ReportPage),
+      },
+      {
+        path: 'reports/exports', canActivate: [sessionGuard], data: { scope: 'tenant' },
+        loadComponent: () => import('./features/reports/report-exports-page').then(m => m.ReportExportsPage),
+      },
+      {
+        path: 'company/setup',
         canActivate: [sessionGuard],
         data: { scope: 'tenant' },
         loadComponent: () =>

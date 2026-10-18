@@ -118,3 +118,18 @@ mat-dialog-content > mat-form-field {
     padding: 18px;
   }
 }
+
+.directory-table {
+  overflow-x: auto;
+}
+.directory-table table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+.directory-table th,
+.directory-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}

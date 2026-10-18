@@ -393,7 +393,16 @@ async function main() {
 
     const admin2 = await invite('admin2@example.test', [role('company_admin')]);
     expectStatus(admin2, 201);
+    const admin2Profile = (await req('/users?search=admin2@example.test')).body
+      .items[0];
+    assert.ok(admin2Profile.employee_id);
+    assert.equal(admin2Profile.employee_status, 'invited');
     expectStatus(await activate(admin2.body.invitation.token), 200);
+    assert.equal(
+      (await req(`/employees/${admin2Profile.employee_id}`)).body.employee
+        .status,
+      'active',
+    );
     const concurrent = await Promise.all([
       updateRoles(adminId, [role('hr')], hrCookie),
       updateRoles(admin2.body.id, [role('hr')], hrCookie),
@@ -404,6 +413,105 @@ async function main() {
     );
     a.cookie = (await login('access-a')).cookie;
     pass('concurrent demotions retain at least one active Company Admin');
+
+    // Restore original admin for the remaining fixture; existing employee is reused.
+    expectStatus(
+      await updateRoles(adminId, [role('company_admin')], hrCookie),
+      200,
+    );
+    a.cookie = (await login('access-a')).cookie;
+    const initialProfile = (await req('/employees/me')).body.employee;
+    assert.equal(initialProfile.user_id, adminId);
+    const promoted = await invite('promoted@example.test');
+    expectStatus(promoted, 201);
+    expectStatus(await activate(promoted.body.invitation.token), 200);
+    expectStatus(
+      await updateRoles(promoted.body.id, [role('company_admin')]),
+      200,
+    );
+    const promotedProfile = (await req('/users?search=promoted@example.test'))
+      .body.items[0];
+    assert.ok(promotedProfile.employee_id);
+    expectStatus(
+      await updateRoles(promoted.body.id, [role('company_admin')]),
+      200,
+    );
+    assert.equal(
+      (await req('/users?search=promoted@example.test')).body.items[0]
+        .employee_id,
+      promotedProfile.employee_id,
+    );
+    const matching = await req('/employees', 'POST', {
+      employee_code: 'MATCHADMIN',
+      first_name: 'Matching',
+      last_name: 'Admin',
+      joining_date: '2026-01-01',
+      employment_type: 'Contract',
+      email: 'matching@example.test',
+      address: {},
+      emergency_contact: {},
+    });
+    expectStatus(matching, 201);
+    const matchedUser = await invite('matching@example.test', [
+      role('company_admin'),
+    ]);
+    expectStatus(matchedUser, 201);
+    assert.equal(
+      (await req('/users?search=matching@example.test')).body.items[0]
+        .employee_id,
+      matching.body.id,
+    );
+    assert.equal(
+      (await req(`/employees/${matching.body.id}`)).body.employee
+        .employment_type,
+      'Contract',
+    );
+    expectStatus(await activate(matchedUser.body.invitation.token), 200);
+    assert.equal(
+      (await req(`/employees/${matching.body.id}`)).body.employee.status,
+      'active',
+    );
+    expectStatus(
+      await request(
+        `/employees/${promotedProfile.employee_id}`,
+        'GET',
+        undefined,
+        b.cookie,
+      ),
+      404,
+    );
+    const [{ reserved }] = await db.query(
+      "SELECT count(*)::int AS reserved FROM employees WHERE tenant_id=$1 AND archived_at IS NULL AND status IN ('active','invited','on_notice')",
+      [a.id],
+    );
+    const [{ employee_limit: oldLimit }] = await db.query(
+      'SELECT employee_limit FROM tenants WHERE id=$1',
+      [a.id],
+    );
+    await db.query('UPDATE tenants SET employee_limit=$2 WHERE id=$1', [
+      a.id,
+      reserved,
+    ]);
+    expectStatus(
+      await invite('fulladmin@example.test', [role('company_admin')]),
+      409,
+    );
+    assert.equal(
+      (
+        await db.query('SELECT id FROM users WHERE tenant_id=$1 AND email=$2', [
+          a.id,
+          'fulladmin@example.test',
+        ])
+      ).length,
+      0,
+    );
+    await db.query('UPDATE tenants SET employee_limit=$2 WHERE id=$1', [
+      a.id,
+      oldLimit,
+    ]);
+    pass(
+      'admin creation and promotion ensure one linked employee, reuse matching profiles, preserve tenant isolation and roll back at capacity',
+    );
 
     const [{ count }] = await db.query(
       "SELECT count(*)::int AS count FROM users WHERE tenant_id=$1 AND status IN ('active','invited')",

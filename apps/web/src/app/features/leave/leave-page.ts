@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_FORM_IMPORTS } from '../../shared/ui/material';
 import { SessionService } from '../../core/auth/session.service';
@@ -15,6 +15,8 @@ import { LeaveApplyDialog } from './leave-apply-dialog';
   styleUrl: './leave.scss',
 })
 export class LeavePage {
+  private readonly route = inject(ActivatedRoute);
+  readonly directEmployee = this.route.snapshot.paramMap.get('id');
   private readonly api = inject(LeaveApi);
   private readonly dialog = inject(MatDialog);
   readonly session = inject(SessionService);
@@ -45,6 +47,13 @@ export class LeavePage {
     return this.manages() || !!this.session.user()?.permissions.includes('leave.approve.team');
   }
   constructor() {
+    if (this.directEmployee) {
+      this.employeeId = this.directEmployee;
+      this.mode = 'team';
+      this.year = Number(this.route.snapshot.queryParamMap.get('year') ?? this.year);
+      this.load();
+      return;
+    }
     if (this.mode === 'self') this.load();
     if (this.teamAllowed()) this.loadPeople();
   }

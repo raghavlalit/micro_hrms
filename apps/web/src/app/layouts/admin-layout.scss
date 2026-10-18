@@ -122,6 +122,7 @@ nav a.active {
   padding: 0 28px;
 }
 .breadcrumb {
+  margin-right: auto;
   display: flex;
   gap: 13px;
   font-size: 12px;
@@ -132,7 +133,7 @@ nav a.active {
   font-weight: 500;
 }
 .account-button {
-  margin-left: auto;
+  margin-left: 0;
 }
 .avatar {
   display: inline-grid;

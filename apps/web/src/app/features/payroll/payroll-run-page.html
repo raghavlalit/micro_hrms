@@ -48,8 +48,12 @@
           </button>
         }
         @if (detail.run.status === 'locked' && !detail.run.published_at) {
-          <button mat-flat-button (click)="action('publish')" [disabled]="loading()">
-            Publish payslips
+          <button
+            mat-flat-button
+            (click)="action('publish')"
+            [disabled]="loading() || jobStatus() === 'pending' || jobStatus() === 'running'"
+          >
+            {{ jobStatus() === 'failed' ? 'Retry generation' : 'Generate and publish payslips' }}
           </button>
         }
         @if (detail.run.published_at) {
@@ -57,6 +61,14 @@
         }
         <button mat-button (click)="load()" [disabled]="loading()">Refresh</button>
       </div>
+      @if (detail.run.status === 'locked') {
+        <app-payslip-job-panel
+          [runId]="detail.run.id"
+          [published]="!!detail.run.published_at"
+          (changed)="jobStatus.set($event)"
+          (completed)="load()"
+        />
+      }
     </section>
     <div class="summary-grid">
       <article class="panel">

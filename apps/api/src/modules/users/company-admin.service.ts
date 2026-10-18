@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { User, UserRole } from './user.schemas';
+import { AdminEmployeeService } from '../employees/admin-employee.service';
 
 @Injectable()
 export class CompanyAdminService {
+  constructor(private readonly employees: AdminEmployeeService) {}
   async createInvited(
     manager: EntityManager,
     tenantId: string,
@@ -23,6 +25,7 @@ export class CompanyAdminService {
     await manager
       .getRepository(UserRole)
       .insert({ tenant_id: tenantId, user_id: userId, role_id: roleId });
+    await this.employees.ensure(manager, tenantId, userId);
     return userId;
   }
 }

@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BackgroundJobView } from '../../shared/background-job';
 import {
   PayrollDetail,
   PayrollItem,
@@ -54,6 +55,11 @@ export class PayrollApi {
   }
   run(id: string) {
     return this.http.get<PayrollDetail>(`/api/v1/payroll/runs/${id}`);
+  }
+  generation(id: string) {
+    return this.http.get<{ job: BackgroundJobView | null }>(
+      `/api/v1/payroll/runs/${id}/payslip-job`,
+    );
   }
   version(id: string, version: number) {
     return this.http.get<{ version: number; items: PayrollItem[] }>(

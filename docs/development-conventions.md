@@ -14,7 +14,8 @@ application; they do not implement feature workflows.
 | `apps/api/src/modules/platform` | Platform administrator schemas, routes and provisioning command |
 | `apps/api/src/modules/tenants` | Company routes, tenant lookup and transaction scope, onboarding seed template |
 | `apps/api/src/modules/users` | Company user identities, roles and permissions |
-| `apps/api/src/modules/audit` | Tenant audit-log schema |
+| `apps/api/src/modules/audit` | Tenant audit-log schema, read-only history API and safe detail projection |
+| `apps/api/src/modules/background-jobs` | Durable jobs, leases, shared Redis configuration and worker entry point; business processing stays in payroll/reports/leave |
 | `apps/api/src/database` | Shared connection configuration, entity registry, schema helpers, role safety check and migrations |
 | `apps/web/src/app/features/auth` | Login/session/password screen and its component tests |
 | `apps/web/src/app/app.ts` and `app.routes.ts` | Root outlet and lazy feature routing |

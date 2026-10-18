@@ -530,7 +530,7 @@ async function main() {
     pass(
       'termination immediately disables login/sessions and retains employee and protected history',
     );
-    await db.query('UPDATE tenants SET employee_limit=3 WHERE id=$1', [a.id]);
+    await db.query('UPDATE tenants SET employee_limit=4 WHERE id=$1', [a.id]);
     const concurrent = await Promise.all([
       req('/employees', 'POST', profile('LIMIT_A')),
       req('/employees', 'POST', profile('LIMIT_B')),
@@ -548,7 +548,7 @@ async function main() {
       'SELECT active_employee_count FROM tenants WHERE id=$1',
       [a.id],
     );
-    assert.equal(counter.active_employee_count, 1);
+    assert.equal(counter.active_employee_count, 2);
     const audits = await db.query(
       'SELECT action,metadata FROM audit_logs WHERE tenant_id=$1 AND entity_type=$2',
       [a.id, 'employee'],

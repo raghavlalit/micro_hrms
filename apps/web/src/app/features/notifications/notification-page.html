@@ -1,0 +1,75 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">YOUR WORKSPACE</p>
+      <h1>Notifications</h1>
+      <p class="muted">Approval updates, invitations and payslip alerts, all in one place.</p>
+    </div>
+    <button mat-flat-button (click)="all()" [disabled]="loading() || !api.unread()">
+      Mark all as read
+    </button>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message" role="status">{{ notice() }}</p>
+  }
+  <section class="panel">
+    <div class="toolbar">
+      <mat-form-field appearance="outline"
+        ><mat-label>Show notifications</mat-label
+        ><mat-select [(ngModel)]="status" (selectionChange)="load(true)" [disabled]="loading()"
+          ><mat-option value="all">All notifications</mat-option
+          ><mat-option value="unread">Unread</mat-option
+          ><mat-option value="read">Read</mat-option></mat-select
+        ></mat-form-field
+      ><span class="muted">{{ api.unread() ?? '—' }} unread</span
+      ><button mat-stroked-button (click)="load()" [disabled]="loading()">Refresh</button>
+      @if (admin) {
+        <a mat-button routerLink="/notifications/deliveries">Email delivery status</a>
+      }
+    </div>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading notifications" />
+    }
+    @for (row of rows(); track row.id) {
+      <article class="notification" [class.unread]="!row.read_at">
+        <div class="indicator" aria-hidden="true"></div>
+        <div class="notification-copy">
+          <div class="notification-heading">
+            <h2>{{ row.title }}</h2>
+            <span class="state">{{ row.read_at ? 'Read' : 'Unread' }}</span>
+          </div>
+          <p>{{ row.body }}</p>
+          <time [attr.datetime]="row.created_at">{{ row.created_at | date: 'medium' }}</time>
+          <div class="actions">
+            <a mat-button [routerLink]="row.link">Open related screen →</a
+            ><button mat-button (click)="read(row)" [disabled]="loading()">
+              {{ row.read_at ? 'Mark unread' : 'Mark read' }}
+            </button>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      @if (!loading() && !error()) {
+        <div class="empty-state">
+          <h2>You're all caught up</h2>
+          <p>No {{ status === 'all' ? '' : status }} notifications to show.</p>
+        </div>
+      }
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page - 1"
+      [pageSize]="20"
+      [disabled]="loading()"
+      (page)="page = $event.pageIndex + 1; load()"
+      aria-label="Notification pages"
+    />
+  </section>
+  <p class="muted footnote">
+    Alerts refresh every 30 seconds in the navigation badge. Related screens always check your
+    current access.
+  </p>
+</main>

@@ -13,7 +13,7 @@ Baseline: `Micro_HRMS_Phase_1_Requirements_v1.1.docx`. There are 40 application 
 | Leave | leave_types, leave_policies, employee_leave_policies, leave_balances, leave_requests, leave_balance_entries |
 | Payroll | salary_components, salary_structures, salary_structure_lines, payroll_runs, payroll_employees, payroll_lines, payslips |
 | Documents | document_categories, documents, document_versions |
-| Notifications and export operations | notifications, outbox_events, export_jobs |
+| Notifications and export operations | notifications, outbox_events, export_jobs (legacy), background_jobs |
 | Audit and platform operations | audit_logs, platform_admins, support_access_grants |
 
 ## Main relationships
@@ -54,7 +54,7 @@ Every tenant relationship also carries `tenant_id`. Foreign keys cannot point to
 - Employee bank/identifier fields are ciphertext-only columns with a key version. Encryption/decryption and key management must be implemented before accepting real sensitive values.
 - Files are represented by object keys, MIME types, byte sizes and checksums. Binary files belong in private object storage.
 - Token/session fields hold hashes, never plaintext credentials. Single-use consumption and session revocation require transactional authentication services.
-- Notifications and outbox records include idempotency keys. The outbox allows a business transaction to commit even if BullMQ/email delivery is temporarily unavailable; the dispatcher is a later implementation task.
+- Notifications and outbox records include idempotency keys. The implemented dispatcher/worker hands off committed notification emails to BullMQ/SMTP. Outbox delivery status, attempts, fixed error codes and temporary encrypted invitation credentials are described in [notifications](notifications.md). A narrow discovery view exposes only due references across active tenants; all payload processing uses tenant RLS.
 
 ## Decisions and service rules still required
 
@@ -66,7 +66,7 @@ Migration `1791378000000-LeaveRequestCalculation` adds `leave_requests.calculati
 
 Service transactions must prevent overlapping salary effective periods, overlapping balance periods, overlapping payroll periods with different boundary dates, and conflicting leave requests/half-days. Uniqueness constraints alone do not prevent these overlaps. Lock the relevant employee/balance/payroll records for concurrent transitions and add exclusion constraints in a future migration once the exact policy is agreed.
 
-Locked payroll is immutable. An audited post-lock correction workflow requires additional service design. Payroll services now reconcile totals, publish only locked snapshots and enforce payslip ownership. Document-library visibility remains separate work.
+Locked payroll is immutable. An audited post-lock correction workflow requires additional service design. Payroll services reconcile totals, publish only locked snapshots and enforce payslip ownership. Document services enforce HR, owner and explicitly permitted direct-manager visibility.
 
 Migration `1791385000000-PayrollVersions` adds integer `calculation_version` to
 `payroll_runs` (default 0) and `payroll_employees` (default 1), both non-null. The
@@ -77,6 +77,29 @@ grants the runtime role column-level `UPDATE(settings)` on `tenants`.
 `updated_at` is managed by TypeORM on ORM updates. Raw SQL writers must set it explicitly. Audit metadata must be sanitized by the application before insertion.
 
 ## Migration sequence
+
+Migration `1791500000000-BackgroundJobs` adds durable PDF/CSV work, with requester
+and tenant foreign keys, unique request keys, status/progress/retry/lease fields,
+private payload/result JSON and expiry timestamps. The table has forced RLS and
+runtime SELECT/INSERT/UPDATE grants. A restricted discovery view exposes due
+references for active tenants. There are now 43 application tables, 38 with forced
+tenant RLS, and 13 migrations. See [background jobs](background-jobs.md) for column
+groups, worker setup, storage, access checks and lifecycle details.
+
+Migration `1791600000000-LeaveAssignmentJobs` extends the job kind check with
+`leave_assignment` and the status check with `draft`. It adds no tables or columns.
+Leave policy `applicability` now accepts optional department/location UUIDs.
+See [employee leave assignment](leave-assignments.md) for frozen previews,
+background processing, eligibility, and preservation of existing balances.
+
+Migration `1791440000000-DocumentManagement` adds `documents.revision` (non-null
+UUID, generated default), the global `documents.read.team` permission and an
+immutable-version trigger on `document_versions`. Existing tenant-aware foreign
+keys remain unchanged. File bytes live in private storage; sharing, expiry,
+archives and checksums are enforced by the [document services](document-management.md).
+Follow-up `1791440000001-DocumentManagementGrants` grants and audits the narrower team
+permission to existing document-management roles so authorized administrators can
+delegate it; ordinary manager/employee roles are unchanged.
 
 1. `InitialPhaseOne1791178103170` creates 40 tables, indexes, constraints and tenant-aware relationships.
 2. `TenantSecurity1791178103171` adds RLS policies, runtime grants, reference data and history/payroll protection triggers.

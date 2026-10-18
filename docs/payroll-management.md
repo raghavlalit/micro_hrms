@@ -3,7 +3,8 @@
 Phase 1 supports monthly fixed salaries, calendar-day proration, audited manual
 adjustments, calculation history, review, locking and private PDF payslips.
 Approved unpaid-leave deductions are **off until HR enables them**. There are no
-automatic statutory rates, bank payments, emails or attendance-absence deductions.
+automatic statutory rates, bank payments or attendance-absence deductions.
+Published payslips create employee notifications and configured email alerts.
 
 ## First company setup
 
@@ -31,9 +32,11 @@ automatic statutory rates, bank payments, emails or attendance-absence deduction
 10. Mark reviewed, then lock **after the month has ended in company time**. Resolve
     all pending leave requests and attendance corrections for the period first.
     The server checks input changes again. There is no unlock workflow.
-11. Publish payslips. Employees with `payslips.read.self` see their statements in
-    **My payslips**. HR can view/download from the locked run. Publishing does not
-    confirm payment. Repeating publication returns the existing published result.
+11. Choose **Generate and publish payslips**. A separate worker generates PDFs;
+    the run page shows progress. Once the whole batch completes, employees with
+    `payslips.read.self` see statements in **My payslips** and HR can download them
+    from the locked run. Publishing does not confirm payment. Repeated requests
+    are idempotent; failed jobs offer Retry generation. See [worker setup](background-jobs.md).
 
 ## Calculation rules
 
@@ -77,7 +80,8 @@ Mutations require `X-HRMS-Request: 1`, the session cookie and an allowed Origin.
 | POST       | `/payroll/runs/:id/calculate`         | Calculate a new version                                                    |
 | POST       | `/payroll/runs/:id/review`            | Mark reviewed                                                              |
 | POST       | `/payroll/runs/:id/lock`              | Freeze reviewed payroll                                                    |
-| POST       | `/payroll/runs/:id/publish`           | Publish private PDFs                                                       |
+| POST       | `/payroll/runs/:id/publish`           | 202; queue private PDF generation/publication                               |
+| GET        | `/payroll/runs/:id/payslip-job`       | Generation status and progress                                             |
 | POST       | `/payroll/employees/:id/adjustments`  | Add adjustment; ID is a **payroll employee item**, not an employee profile |
 | PUT        | `/payroll/adjustments/:id`            | Correct/void manual line                                                   |
 | GET        | `/payslips/me`                        | Current user's published statements                                        |
@@ -163,7 +167,7 @@ Without `PAYSLIP_FONT_PATH`, PDF generation supports printable ASCII names with
 Helvetica. Publication rejects non-ASCII company/employee/component names instead
 of producing broken text. Configure a readable TTF/OTF font covering every used
 script and verify a sample in UAT before publishing. Custom fonts must also be
-present in each API replica.
+present in each generation worker. API and workers must share the payslip volume.
 
 PDF writes use a temporary file and atomic rename. A transaction failure may leave
 an unpublished file; retry publication safely overwrites its deterministic key.
@@ -191,8 +195,8 @@ They cover precision, salary coverage, revisions, proration, unpaid leave,
 concurrency, immutable locking, audits, tenant isolation and payslip ownership.
 Browser checks cover management and self-service flows at desktop/mobile sizes.
 
-This implementation publishes synchronously and is intended for Phase 1 company
-sizes. High-volume background processing, payroll exports, automatic statutory
-calculations, notifications, bank disbursement and post-lock correction runs are
-separate features. Existing runs created outside these APIs without calculation
+PDF publication runs in the [background worker](background-jobs.md); payroll CSV
+exports are available through Reports. Automatic statutory calculations, bank
+disbursement and post-lock correction runs remain separate features.
+Existing runs created outside these APIs without calculation
 revision metadata require migration/reconciliation before further processing.

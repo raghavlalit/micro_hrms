@@ -67,6 +67,30 @@
                         <mat-option [value]="option.value">{{ option.label }}</mat-option>
                       }
                     </mat-select>
+                  } @else if (field.type === 'date') {
+                    <input
+                      matInput
+                      [matDatepicker]="calendar"
+                      placeholder="YYYY-MM-DD"
+                      [id]="field.key"
+                      [name]="field.key"
+                      [ngModel]="value(field)"
+                      (ngModelChange)="setValue(field, $event)"
+                      [required]="!!field.required"
+                    />
+                  } @else if (field.type === 'number') {
+                    <input
+                      matInput
+                      type="number"
+                      [id]="field.key"
+                      [name]="field.key"
+                      [ngModel]="value(field)"
+                      (ngModelChange)="setValue(field, $event)"
+                      [required]="!!field.required"
+                      [min]="field.min ?? null"
+                      [max]="field.max ?? null"
+                      [step]="field.step ?? 'any'"
+                    />
                   } @else {
                     <input
                       matInput
@@ -80,6 +104,10 @@
                       [max]="field.max ?? null"
                       [step]="field.step ?? 'any'"
                     />
+                  }
+                  <mat-datepicker #calendar />
+                  @if (field.type === 'date') {
+                    <mat-datepicker-toggle matIconSuffix [for]="calendar" />
                   }
                   @if (field.hint) {
                     <mat-hint>{{ field.hint }}</mat-hint>

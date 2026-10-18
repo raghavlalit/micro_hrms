@@ -1,4 +1,7 @@
 <main class="page">
+  @if (teamAllowed()) {
+    <a mat-button routerLink="/attendance" [queryParams]="backQuery">? Back to employee list</a>
+  }
   <div class="page-heading">
     <div>
       <p class="eyebrow">TIME &amp; ATTENDANCE</p>
@@ -16,57 +19,6 @@
     <p class="message" role="status">{{ success() }}</p>
   }
   <section class="panel attendance-filters">
-    @if (selfAllowed() && teamAllowed()) {
-      <mat-form-field appearance="outline" subscriptSizing="dynamic"
-        ><mat-label>View</mat-label
-        ><mat-select [(ngModel)]="mode" [disabled]="loading()" (selectionChange)="switchMode()"
-          ><mat-option value="self">My attendance</mat-option
-          ><mat-option value="team">Team / company</mat-option></mat-select
-        ></mat-form-field
-      >
-    }
-    @if (mode === 'team') {
-      <div class="people-search">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic"
-          ><mat-label>Find employee</mat-label
-          ><input
-            matInput
-            [(ngModel)]="search"
-            maxlength="100"
-            (keyup.enter)="searchPeople()" /></mat-form-field
-        ><button mat-button [disabled]="peopleBusy() || loading()" (click)="searchPeople()">
-          Search
-        </button>
-      </div>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic"
-        ><mat-label>Employee</mat-label
-        ><mat-select
-          [(ngModel)]="employeeId"
-          [disabled]="loading() || peopleBusy()"
-          (selectionChange)="load()"
-        >
-          @for (person of people(); track person.id) {
-            <mat-option [value]="person.id"
-              >{{ person.name }} · {{ person.employee_code }}</mat-option
-            >
-          }
-        </mat-select></mat-form-field
-      >
-      @if (peopleTotal > 50) {
-        <div>
-          <button mat-button [disabled]="peoplePage === 1 || peopleBusy()" (click)="peopleStep(-1)">
-            Previous employees</button
-          ><span class="muted">Page {{ peoplePage }}</span
-          ><button
-            mat-button
-            [disabled]="peoplePage * 50 >= peopleTotal || peopleBusy()"
-            (click)="peopleStep(1)"
-          >
-            Next employees
-          </button>
-        </div>
-      }
-    }
     <mat-form-field appearance="outline" subscriptSizing="dynamic"
       ><mat-label>Month</mat-label
       ><input
@@ -88,7 +40,7 @@
           <span class="count">{{ calendar.employee.employee_code }}</span>
         </h2>
         <p class="muted">
-          Today: {{ calendar.today | date: 'mediumDate' : 'UTC' }} · {{ calendar.timezone }}
+          Today: {{ calendarDate(calendar.today) | date: 'mediumDate' : 'UTC' }} · {{ calendar.timezone }}
         </p>
         <p class="muted">
           {{ calendar.schedule.name || 'No unambiguous work schedule assigned' }}
@@ -172,7 +124,7 @@
             @for (day of calendar.items; track day.work_date) {
               <tr [class.current-day]="day.work_date === calendar.today">
                 <td class="nowrap">
-                  {{ day.work_date | date: 'EEE, d MMM' : 'UTC' }}
+                  {{ calendarDate(day.work_date) | date: 'EEE, d MMM' : 'UTC' }}
                   @if (day.work_date === calendar.today) {
                     <span class="count">Today</span>
                   }

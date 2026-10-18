@@ -8,9 +8,11 @@ import { EntityManager, IsNull } from 'typeorm';
 import { AuthToken } from './auth.schemas';
 import { User } from '../users/user.schemas';
 import { credentialHash } from './password';
+import { NotificationEvents } from '../notifications/notification-events.service';
 
 @Injectable()
 export class InvitationsService {
+  constructor(readonly notifications: NotificationEvents) {}
   async issue(manager: EntityManager, tenantId: string, userId: string) {
     // Lock the user first in both issuance and activation to avoid lock-order deadlocks.
     const user = await manager
@@ -31,14 +33,22 @@ export class InvitationsService {
       );
     const token = `${tenantId}.${randomBytes(32).toString('hex')}`;
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await manager.getRepository(AuthToken).insert({
+    const issued = await manager.getRepository(AuthToken).insert({
       tenant_id: tenantId,
       user_id: userId,
       purpose: 'invitation',
       token_hash: credentialHash(token),
       expires_at: expiresAt,
     });
-    // The raw token is returned once. Only its hash is stored in PostgreSQL.
+    await this.notifications.invitation(
+      manager,
+      tenantId,
+      userId,
+      String(issued.identifiers[0].id),
+      token,
+    );
+    // Authentication stores only the hash. SMTP delivery retains a separately
+    // encrypted copy until sent, expired/replaced or permanently failed.
     return { token, expires_at: expiresAt.toISOString() };
   }
 

@@ -1,0 +1,78 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">COMPANY ADMINISTRATION</p>
+      <h1>Email delivery status</h1>
+      <p class="muted">Track delivery attempts and retry failed workflow emails.</p>
+    </div>
+    <a mat-stroked-button routerLink="/notifications">My notifications</a>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message" role="status">{{ notice() }}</p>
+  }
+  <section class="panel">
+    <div class="toolbar">
+      <mat-form-field appearance="outline"
+        ><mat-label>Delivery status</mat-label
+        ><mat-select [(ngModel)]="status" (selectionChange)="load(true)" [disabled]="loading()"
+          ><mat-option value="">All statuses</mat-option>
+          @for (item of ['pending', 'sent', 'failed', 'skipped']; track item) {
+            <mat-option [value]="item">{{ item }}</mat-option>
+          }
+        </mat-select></mat-form-field
+      ><button mat-stroked-button (click)="load()" [disabled]="loading()">Refresh</button>
+    </div>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading deliveries" />
+    }
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Email deliveries">
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Status</th>
+            <th>Attempts</th>
+            <th>Result</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>{{ row.created_at | date: 'short' }}</td>
+              <td>{{ row.status }}</td>
+              <td>{{ row.attempts }}</td>
+              <td>{{ row.error_code ?? '—' }}</td>
+              <td>
+                @if (row.status === 'failed') {
+                  <button mat-button (click)="retry(row)" [disabled]="loading()">
+                    Retry delivery
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !rows().length && !error()) {
+      <p class="empty-state">No matching email deliveries.</p>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page - 1"
+      [pageSize]="20"
+      [disabled]="loading()"
+      (page)="page = $event.pageIndex + 1; load()"
+      aria-label="Delivery pages"
+    />
+  </section>
+  <p class="muted footnote">
+    Sent means the SMTP server accepted the email, not that the recipient read it. Failed
+    invitations require a replacement invitation with a fresh activation link. Skipped emails are
+    not automatically resent. Failed password resets require a new request from the sign-in screen.
+  </p>
+</main>

@@ -157,7 +157,7 @@ async function main() {
       document_categories: 8,
       leave_policies: 0,
       holidays: 0,
-      employees: 0,
+      employees: 1,
     };
     for (const [table, count] of Object.entries(counts)) {
       const [row] = await db.query(
@@ -170,13 +170,22 @@ async function main() {
       'SELECT count(*)::int AS count FROM role_permissions WHERE tenant_id=$1',
       [aId],
     );
-    assert.equal(roleCount.count, 50);
+    // Includes the employee and manager self-service document grants.
+    assert.equal(roleCount.count, 52);
     const [invited] = await db.query(
       'SELECT id,status,password_hash FROM users WHERE tenant_id=$1',
       [aId],
     );
     assert.equal(invited.status, 'invited');
     assert.equal(invited.password_hash, null);
+    const [adminEmployee] = await db.query(
+      'SELECT * FROM employees WHERE tenant_id=$1 AND user_id=$2',
+      [aId, invited.id],
+    );
+    assert.equal(adminEmployee.status, 'invited');
+    assert.equal(adminEmployee.email, 'admin@example.test');
+    assert.equal(adminEmployee.employment_type, 'Not specified');
+    assert.match(adminEmployee.employee_code, /^ADM-[A-F0-9]{32}$/);
     const [stored] = await db.query(
       'SELECT token_hash FROM auth_tokens WHERE tenant_id=$1',
       [aId],
@@ -251,6 +260,23 @@ async function main() {
     assert.equal(reissued.status, 201);
     assert.equal((await activate(a.body.invitation.token)).status, 401);
     assert.equal((await activate(reissued.body.invitation.token)).status, 200);
+    assert.equal(
+      (
+        await db.query('SELECT status FROM employees WHERE id=$1', [
+          adminEmployee.id,
+        ])
+      )[0].status,
+      'active',
+    );
+    assert.equal(
+      (
+        await db.query(
+          'SELECT active_employee_count FROM tenants WHERE id=$1',
+          [aId],
+        )
+      )[0].active_employee_count,
+      1,
+    );
     assert.equal((await activate(reissued.body.invitation.token)).status, 401);
     assert.equal(
       (

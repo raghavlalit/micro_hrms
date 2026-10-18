@@ -6,8 +6,9 @@ import { MATERIAL_FORM_IMPORTS } from '../../shared/ui/material';
 import { PayrollApi, payrollError } from './payroll-api.service';
 import { PayrollDetail, PayrollItem, PayrollLine } from './payroll.models';
 import { PayrollActionData, PayrollActionDialog } from './payroll-action-dialog';
+import { PayslipJobPanel } from './payslip-job-panel';
 @Component({
-  imports: [FormsModule, RouterLink, ...MATERIAL_FORM_IMPORTS],
+  imports: [FormsModule, RouterLink, PayslipJobPanel, ...MATERIAL_FORM_IMPORTS],
   templateUrl: './payroll-run-page.html',
   styleUrl: './payroll.scss',
 })
@@ -18,6 +19,7 @@ export class PayrollRunPage {
   readonly data = signal<PayrollDetail | null>(null);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly jobStatus = signal('');
   readonly oldItems = signal<PayrollItem[] | null>(null);
   version = 0;
   constructor() {

@@ -75,7 +75,14 @@
             >
             <mat-form-field appearance="outline" subscriptSizing="dynamic"
               ><mat-label>Date of birth</mat-label
-              ><input matInput type="date" name="date_of_birth" [(ngModel)]="profile.date_of_birth"
+              ><input
+                matInput
+                [matDatepicker]="datePicker1"
+                placeholder="YYYY-MM-DD"
+                name="date_of_birth"
+                [(ngModel)]="profile.date_of_birth" /><mat-datepicker-toggle
+                matIconSuffix
+                [for]="datePicker1" /><mat-datepicker #datePicker1
             /></mat-form-field>
           </div>
         </section>
@@ -87,10 +94,13 @@
               ><mat-label>Joining date</mat-label
               ><input
                 matInput
-                type="date"
+                [matDatepicker]="datePicker2"
+                placeholder="YYYY-MM-DD"
                 name="joining_date"
                 [(ngModel)]="profile.joining_date"
                 required
+              /><mat-datepicker-toggle matIconSuffix [for]="datePicker2" /><mat-datepicker
+                #datePicker2
               /><mat-error>Joining date is required.</mat-error></mat-form-field
             >
             <mat-form-field appearance="outline" subscriptSizing="dynamic"
@@ -121,9 +131,12 @@
               ><mat-label>Probation ends on</mat-label
               ><input
                 matInput
-                type="date"
+                [matDatepicker]="datePicker3"
+                placeholder="YYYY-MM-DD"
                 name="probation_ends_on"
-                [(ngModel)]="profile.probation_ends_on"
+                [(ngModel)]="profile.probation_ends_on" /><mat-datepicker-toggle
+                matIconSuffix
+                [for]="datePicker3" /><mat-datepicker #datePicker3
             /></mat-form-field>
           </div>
         </section>

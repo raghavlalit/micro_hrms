@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { SessionService } from '../core/auth/session.service';
 import { AppIcon } from '../shared/ui/app-icon';
+import { NotificationBell } from '../features/notifications/notification-bell';
 
 @Component({
   imports: [
@@ -18,6 +19,7 @@ import { AppIcon } from '../shared/ui/app-icon';
     MatButtonModule,
     MatMenuModule,
     AppIcon,
+    NotificationBell,
   ],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss',
@@ -39,7 +41,20 @@ export class AdminLayout {
     {
       label: 'WORKSPACE',
       items: [
-        { label: 'Overview', path: '/company/overview', icon: 'grid', permission: '' },
+        { label: 'Notifications', path: '/notifications', icon: 'bell', permission: '' },
+        { label: 'Dashboard', path: '/company/overview', icon: 'grid', permission: '' },
+        {
+          label: 'Reports',
+          path: '/reports',
+          icon: 'document',
+          permission: 'reports.read.company|reports.read.team',
+        },
+        {
+          label: 'Documents',
+          path: '/documents',
+          icon: 'document',
+          permission: 'documents.manage|documents.read.self|documents.read.team',
+        },
         { label: 'Payroll', path: '/payroll', icon: 'wallet', permission: 'payroll.manage' },
         {
           label: 'My payslips',
@@ -141,6 +156,7 @@ export class AdminLayout {
     {
       label: 'ADMINISTRATION',
       items: [
+        { label: 'Audit history', path: '/audit-logs', icon: 'document', permission: 'company.manage' },
         {
           label: 'Users & access',
           path: '/administration/users',
@@ -171,6 +187,13 @@ export class AdminLayout {
       .filter((section) => section.items.length);
   }
   title() {
+    if (this.router.url.startsWith('/reports/exports')) return 'My exports';
+    if (this.router.url.startsWith('/notifications/deliveries')) return 'Email delivery status';
+    if (
+      this.router.url.startsWith('/documents') &&
+      !this.router.url.startsWith('/documents/categories')
+    )
+      return 'Documents';
     if (this.router.url.startsWith('/payroll/payslips')) return 'Payslips';
     if (
       this.router.url.startsWith('/payroll/runs') ||
@@ -194,6 +217,11 @@ export class AdminLayout {
   }
   isActive(path: string) {
     const current = this.router.url.split('?')[0];
+    if (path === '/documents')
+      return (
+        current === path ||
+        (current.startsWith('/documents/') && current !== '/documents/categories')
+      );
     if (path === '/payroll')
       return (
         current === path || current.startsWith('/payroll/runs/') || current === '/payroll/salaries'

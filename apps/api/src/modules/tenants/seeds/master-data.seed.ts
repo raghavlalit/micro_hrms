@@ -37,6 +37,7 @@ const existingPermissionCodes = [
   'payslips.read.self',
   'documents.manage',
   'documents.read.self',
+  'documents.read.team',
   'reports.read.company',
   'reports.read.team',
   'audit.read',
@@ -70,7 +71,7 @@ export const MASTER_DATA_SEED = {
   ],
 
   existing_global_data: {
-    managed_by: 'TenantSecurity1791178103171',
+    managed_by: 'TenantSecurity1791178103171 and DocumentManagement1791440000000',
     subscription_plan_codes: ['trial'],
     permission_codes: existingPermissionCodes,
   },

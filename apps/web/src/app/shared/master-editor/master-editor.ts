@@ -124,6 +124,12 @@ export class MasterEditor {
     return child ? (this.model[parent] as Record<string, unknown>)?.[child] : this.model[parent];
   }
   setValue(field: MasterField, value: unknown) {
+    // PostgreSQL decimal columns arrive as strings when editing existing records.
+    // Keep numeric form fields numeric, and never treat an empty field as zero.
+    if (field.type === 'number' && typeof value === 'string') {
+      const number = value.trim() ? Number(value) : NaN;
+      value = Number.isFinite(number) ? number : null;
+    }
     if (value === '' && !field.required && (field.type === 'date' || field.type === 'select'))
       value = null;
     const [parent, child] = field.key.split('.');

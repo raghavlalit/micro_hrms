@@ -30,12 +30,10 @@ export class LeaveAdminDialog {
   private readonly operationId = crypto.randomUUID();
   constructor() {
     if (!this.data.balanceId)
-      this.api
-        .policies()
-        .subscribe({
-          next: (rows) => this.policies.set(rows),
-          error: (error) => this.error.set(leaveError(error)),
-        });
+      this.api.assignmentPolicies(this.data.employeeId, this.data.year).subscribe({
+        next: (rows) => this.policies.set(rows),
+        error: (error) => this.error.set(leaveError(error)),
+      });
   }
   choosePolicy() {
     const policy = this.policies().find((p) => p.id === this.policyId);

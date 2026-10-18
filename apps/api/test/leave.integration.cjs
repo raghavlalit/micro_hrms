@@ -638,6 +638,7 @@ async function main() {
     pass(
       'uncontrolled unpaid leave uses request history without artificial credits and required audit events exist',
     );
+    await require('./leave-assignments.checks.cjs')({ app, db, a, b, req, request, staff, boss, policy, policyBody, expectStatus, pass });
     console.log(`Leave integration checks passed: ${checks}`);
   } finally {
     if (app) await app.close();

@@ -95,10 +95,12 @@ Periodically delete expired `auth_rate_limits` and expired/revoked sessions with
 a trusted maintenance job (tenant sessions require deliberate tenant scope or a
 maintenance identity). No scheduler has been implemented in this milestone.
 
-Email verification, forgotten-password email recovery, MFA and authentication
-audit-event reporting are not implemented. Do not enable email-based recovery
-for a publicly readable mailbox. Use a private, controlled admin email before
-production. Swagger is disabled in production.
+Company forgotten-password recovery is implemented; see
+[password recovery](password-recovery.md) for SMTP setup, expiry, rate limits and
+session revocation. Request/reset events are visible in the company audit history.
+Email verification, MFA and platform-admin email recovery are not implemented.
+Use a private, controlled admin email before production. Swagger is disabled in
+production.
 
 Verification: `npm run auth:test`, `npm run db:test`, `npm run db:smoke`,
 `npm run build`, and `npm run test --workspace=apps/web -- --watch=false`.

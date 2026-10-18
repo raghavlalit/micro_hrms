@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, IsNull } from 'typeorm';
 import { User, UserRole, RolePermission } from '../users/user.schemas';
 import { PlatformAdmin } from '../platform/platform.schemas';
-import { AuthRateLimit, PlatformSession, Session } from './auth.schemas';
+import {
+  AuthRateLimit,
+  AuthToken,
+  PlatformSession,
+  Session,
+} from './auth.schemas';
 
 export interface AuthIdentity {
   id: string;
@@ -166,5 +171,23 @@ export class AuthRepository {
         ...(tenantId ? {} : { must_change_password: false }),
       },
     );
+  }
+
+  async invalidatePasswordResets(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+  ) {
+    await manager
+      .getRepository(AuthToken)
+      .update(
+        {
+          tenant_id: tenantId,
+          user_id: userId,
+          purpose: 'password_reset',
+          consumed_at: IsNull(),
+        },
+        { consumed_at: () => 'now()' },
+      );
   }
 }

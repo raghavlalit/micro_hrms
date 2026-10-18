@@ -108,3 +108,11 @@ checkouts, stale corrections, date validation, payroll locks and auditing.
 Frontend tests cover timezone conversion, daylight-saving boundaries and form
 errors. Browser checks cover employee/HR workflows and mobile layouts using
 mock data; they do not insert demonstration attendance into the development DB.
+
+## Employee attendance directory
+
+Attendance opens a paginated active employee directory for HR/company administrators and a direct-report directory for managers. Search by full name or employee code, choose a month, and use View attendance. Back to employee list retains search, month and page. Employees serving notice remain included; archived and inactive employees are excluded. Self-service users open My attendance directly. Existing historical attendance APIs continue to support permitted non-archived employees.
+
+GET /attendance/people accepts optional active_only=true (active/on_notice only) or false (default, previous behavior), search, page and limit. Department and location names are included. Tenant isolation and direct-report permissions apply before pagination. No migration or background worker is needed.
+
+Attendance date labels explicitly anchor date-only API values to UTC before formatting. This prevents browser timezones from shifting work dates or Today to the previous day; actual check-in/out timestamps still display in the company timezone.

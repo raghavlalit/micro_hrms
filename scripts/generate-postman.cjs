@@ -11,9 +11,22 @@ function request(
   name,
   method,
   endpoint,
-  { body, dto, save = "", description = "", query = [] } = {},
+  {
+    body,
+    dto,
+    multipart = false,
+    save = "",
+    description = "",
+    query = [],
+  } = {},
 ) {
-  const expected =
+  const queued = method === 'POST' && (
+    (endpoint.startsWith('/leave/assignments/jobs/') && (endpoint.endsWith('/confirm') || endpoint.endsWith('/retry'))) ||
+    endpoint.endsWith('/export-jobs') ||
+    (endpoint.startsWith('/report-exports/') && endpoint.endsWith('/retry')) ||
+    (endpoint.startsWith('/payroll/runs/') && endpoint.endsWith('/publish'))
+  );
+  const expected = queued ? 202 :
     method === "POST" && !endpoint.startsWith("/auth/") ? 201 : 200;
   const enabledQuery = query
     .filter((q) => !q.disabled)
@@ -27,7 +40,9 @@ function request(
       method,
       header: [
         { key: "Accept", value: "application/json" },
-        ...(body ? [{ key: "Content-Type", value: "application/json" }] : []),
+        ...(body && !multipart
+          ? [{ key: "Content-Type", value: "application/json" }]
+          : []),
       ],
       url: {
         raw,
@@ -40,11 +55,23 @@ function request(
         "Use a company account with the required permission. Cookie authentication is handled by Postman.",
       ...(body
         ? {
-            body: {
-              mode: "raw",
-              raw: JSON.stringify(body, null, 2),
-              options: { raw: { language: "json" } },
-            },
+            body: multipart
+              ? {
+                  mode: "formdata",
+                  formdata: [
+                    ...Object.entries(body).map(([key, value]) => ({
+                      key,
+                      value: String(value ?? ""),
+                      type: "text",
+                    })),
+                    { key: "file", type: "file", src: [] },
+                  ],
+                }
+              : {
+                  mode: "raw",
+                  raw: JSON.stringify(body, null, 2),
+                  options: { raw: { language: "json" } },
+                },
           }
         : {}),
     },
@@ -138,7 +165,7 @@ const collection = {
     schema:
       "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     description:
-      "Maintained with each completed topic. Import the environment template and read postman/README.md. Session cookies, not bearer tokens. Select individual requests/folders intentionally: this is an API reference, not an all-at-once runner scenario. Writes modify the selected environment. Only implemented routes are included; leave/payroll/documents folders currently contain master settings only.",
+      "Maintained with each completed topic. Import the environment template and read postman/README.md. Session cookies, not bearer tokens. Select individual requests/folders intentionally: this is an API reference, not an all-at-once runner scenario. Writes modify the selected environment. Only implemented routes are included. Documents use multipart uploads; select a local file before sending.",
   },
   auth: { type: "noauth" },
   event: [
@@ -219,6 +246,17 @@ const collection = {
           description:
             "Changes the currently signed-in account password and revokes sessions. Required first for a platform account with a temporary password. Set current_password and new_password locally, then update the matching login password variable.",
         }),
+        post('Request company password reset', '/auth/forgot-password', {
+          body: { company: '{{company_slug}}', email: '{{tenant_email}}' },
+          dto: 'auth/password-recovery.dto:ForgotPasswordDto',
+          description: 'Public company-account recovery, CSRF header required. Generic response whether the account exists or not. Requires active company/account and configured SMTP worker. 5 requests per company/email and 30 per IP per 15 minutes. The link is emailed only; never returned here. Use local Mailpit to obtain the test reset_token from the URL fragment after #. New requests replace earlier links. Platform recovery is not exposed.',
+        }),
+        post('Reset company password', '/auth/reset-password', {
+          body: { token: '{{reset_token}}', password: '{{reset_password}}' },
+          dto: 'auth/password-recovery.dto:ResetPasswordDto',
+          save: "pm.environment.unset('reset_token');",
+          description: 'Public, CSRF protected. Paste only the token after # from the latest email into reset_token. Expires after 30 minutes and works once. Use 15–128 characters. Revokes all account sessions without signing in automatically. Update tenant_password locally and sign in again. Never commit/export populated recovery secrets.',
+        }),
         post("Logout current session", "/auth/logout", {
           body: {},
           description: "Signs out the active cookie session.",
@@ -228,7 +266,7 @@ const collection = {
           description: "Revokes every session for the current account.",
         }),
       ],
-      "No public registration or forgot/reset password API is currently exposed. Do not add placeholders for unimplemented routes.",
+      "Company password recovery uses company code and email. Platform recovery and public registration are not exposed. Recovery links are delivered only by the configured SMTP worker.",
     ),
     folder(
       "02 — Platform company onboarding",
@@ -250,7 +288,7 @@ const collection = {
               "pm.environment.set('tenant_id', data.company.id); " +
               invitationSave,
             description:
-              "Requires platform login. Creates real company defaults and an invited company administrator. Use a unique company_slug. Saves tenant_id and activation_token. Activate, then log in as the company user.",
+              "Requires platform login. Creates company defaults, an invited company administrator and a linked employee profile in one transaction. Activation also activates that employee. Employee code is generated; joining date defaults to account creation date and employment type to Not specified for HR review. Use a unique company_slug. Saves tenant_id and activation_token. Activate, then log in as the company user.",
           },
         ),
         post(
@@ -343,7 +381,8 @@ const collection = {
           {
             leave_type_id: "{{leave_type_id}}",
             name: "Postman Policy",
-            annual_entitlement: 12,
+            annual_entitlement: 18,
+            applicability: { department_id: null, location_id: null },
             is_paid: true,
             balance_controlled: true,
             carry_forward_enabled: false,
@@ -376,7 +415,7 @@ const collection = {
           "documents.manage",
         ),
       ],
-      "Only implemented master CRUD. Leave requests, payroll runs and document uploads are not implemented yet. Holiday calendar requests are in folder 08.",
+      "Master CRUD. Operational holiday, attendance, leave, payroll and document requests are in folders 08-12.",
     ),
     folder("06 — Employees", [
       get("List employees", "/employees", {
@@ -514,7 +553,7 @@ const collection = {
             { key: "role_id", value: "{{employee_role_id}}", disabled: true },
           ],
         }),
-        post("Invite standalone user", "/users", {
+        post("Invite company user", "/users", {
           body: {
             display_name: "Postman User",
             email: "{{invited_user_email}}",
@@ -524,13 +563,13 @@ const collection = {
           dto: "users/user-access.dto:InviteUserDto",
           save: idSave("user_id") + invitationSave,
           description:
-            "Run role catalog first. Saves target user_id and activation_token. For an existing employee use their profile invitation endpoint instead.",
+            "Run role catalog first. Saves target user_id and activation_token. Include company_admin_role_id to automatically create a linked employee (or reuse an available unlinked employee with the same email). For other roles, invite existing employees from their profile. Admin creation consumes an employee place; capacity failure rolls back the account and invitation. Review generated employee details in Employees.",
         }),
         put("Assign built-in role to user", "/users/{{user_id}}/roles", {
           body: { role_ids: ["{{manager_role_id}}"], ...reason },
           dto: "users/user-access.dto:UserRolesDto",
           description:
-            "Replaces the complete role list. Add more same-company role IDs for multiple roles. Revokes existing sessions; self-change and last-admin removal are blocked.",
+            "Replaces the complete role list. Add more same-company role IDs for multiple roles. Assigning company_admin ensures one linked employee profile and checks employee capacity. Existing profiles and employment details are preserved. Revokes existing sessions; self-change and last-admin removal are blocked.",
         }),
         put("Disable user account", "/users/{{user_id}}/status", {
           body: { status: "disabled", ...reason },
@@ -642,9 +681,9 @@ collection.item.push(
           "Requires attendance.self and a linked employee. Omit month for the company-timezone current month. Returns recorded and explicitly marked projected days, schedule settings, summaries and today actions.",
       }),
       get("Find permitted employees", "/attendance/people", {
-        query: pageQuery,
+        query: [...pageQuery, { key: "active_only", value: "true" }],
         description:
-          "attendance.manage sees company employees; attendance.approve.team sees direct reports only. Use a returned id as employee_id. Supports search/page/limit.",
+          "attendance.manage sees company employees; attendance.approve.team sees direct reports only. Use a returned id as employee_id. Supports search/page/limit. active_only=true restricts to active/on_notice employees; omit or use false to include other non-archived statuses. Returns department_name and location_name.",
       }),
       get(
         "Employee monthly attendance",
@@ -773,6 +812,21 @@ collection.item.push(
         description:
           "leave.manage sees company employees; leave.approve.team sees direct reports.",
       }),
+      get('Employee leave assignment directory', '/leave/assignments', {
+        query: [{ key: 'year', value: '{{leave_year}}' }, ...pageQuery,
+          ...['department_id', 'location_id', 'policy_id', 'status'].map(key => ({ key, value: key === 'status' ? 'unassigned' : '{{' + (key === 'policy_id' ? 'leave_policy_id' : key) + '}}', disabled: true }))],
+        description: 'leave.manage. Server pagination; summary ignores the status filter. Active/on-notice employees with employment overlap. Status is assigned, partial, unassigned or not_applicable; completeness counts distinct applicable active leave types. Policy department/location scope and effective dates apply.' }),
+      get('Leave assignment department options', '/leave/assignments/departments'),
+      get('Leave assignment location options', '/leave/assignments/locations'),
+      get('Unassigned applicable employee policies', '/leave/assignments/employees/{{employee_id}}/policies', { query: [{ key: 'year', value: '{{leave_year}}' }], description: 'leave.manage. Only active, applicable policies without an existing balance for this employee, leave type and year.' }),
+      post('Preview bulk leave assignment', '/leave/assignments/preview', {
+        body: { operation_id: '{{leave_assignment_operation_id}}', policy_id: '{{leave_policy_id}}', year: 2026, credited: 18, carry_forward: 0, reason: 'Reviewed annual entitlement', all_matching: false, employee_ids: ['{{employee_id}}'], filters: { year: 2026 } },
+        dto: 'leave/leave-assignment.dto:LeaveAssignmentPreviewDto', save: idSave('leave_assignment_job_id'),
+        description: 'Creates a 30-minute draft only; does not credit leave. Maximum 10000 employees. For all matching pages set all_matching=true, remove employee_ids and supply directory filters. Both years must match. Existing balances are skipped; eligibility is rechecked at execution. Reuse an operation UUID only for identical input. One policy per batch; no bulk carry-forward.' }),
+      post('Confirm bulk leave assignment', '/leave/assignments/jobs/{{leave_assignment_job_id}}/confirm', { description: '202 Accepted; owner with leave.manage only. Confirms frozen employee IDs. Requires jobs:worker. Repeated confirmation does not recredit. Changed policies require a new preview.' }),
+      get('Recent leave assignment jobs', '/leave/assignments/jobs', { description: 'Latest 20 jobs belonging to the current requester.' }),
+      get('Leave assignment preview or progress', '/leave/assignments/jobs/{{leave_assignment_job_id}}', { query: [{ key: 'page', value: '1' }], description: 'Owner only. Counts and 50 outcome rows per page. Poll until completed/failed; preview rows do not credit balances.' }),
+      post('Retry failed leave assignment', '/leave/assignments/jobs/{{leave_assignment_job_id}}/retry', { description: '202 Accepted. Owner only; preserves already committed outcomes and balances. If the policy changed, create a new preview instead.' }),
       get(
         "Employee balances and assignments",
         "/leave/employees/{{employee_id}}",
@@ -1007,15 +1061,16 @@ collection.item.push(
           "Irreversible through this release. Month must have ended; resolve pending leave and attendance corrections first. Rechecks current inputs and freezes the period against attendance/leave changes. Refresh run details after success.",
       }),
       post(
-        "Publish private payslip PDFs",
+        "Queue private payslip PDFs",
         "/payroll/runs/{{payroll_run_id}}/publish",
         {
           body: payrollTransition,
           dto: "payroll/payroll.dto:PayrollTransitionDto",
           description:
-            "Locked runs only. Generates files in private PAYSLIP_STORAGE_DIR. Requires persistent storage; non-ASCII names require PAYSLIP_FONT_PATH. Repeat publication is idempotent. Does not pay employees or send email.",
+            "202 Accepted. Locked runs only. The separate jobs:worker generates PDFs in private PAYSLIP_STORAGE_DIR and atomically publishes the whole batch. Poll payslip-job for status. Repeating a failed request retries generation; successful repeats are idempotent. Shared persistent storage required; non-ASCII names require PAYSLIP_FONT_PATH. Sends configured payslip notifications after publication; does not pay employees.",
         },
       ),
+      get('Payslip generation status', '/payroll/runs/{{payroll_run_id}}/payslip-job', { description: 'payroll.manage required. Returns job or null. Poll pending/running until completed or failed. PDFs become visible only after the entire batch is published.' }),
       get("My published payslips", "/payslips/me", {
         query: pageQuery,
         description:
@@ -1034,7 +1089,156 @@ collection.item.push(
   ),
 );
 
+const documentMetadata = {
+  title: "Employment contract",
+  category_id: "{{document_category_id}}",
+  visibility: "hr_only",
+  issue_date: "{{document_issue_date}}",
+  expiry_date: "{{document_expiry_date}}",
+  reason: "Reviewed employee document",
+};
+const documentAction = {
+  revision: "{{document_revision_id}}",
+  reason: "Reviewed document change",
+};
+collection.item.push(
+  folder(
+    "12 — Document management",
+    [
+      get("Document library", "/documents", {
+        query: [
+          ...pageQuery,
+          { key: "status", value: "active" },
+          { key: "expiry", value: "all" },
+          { key: "employee_id", value: "{{employee_id}}", disabled: true },
+          {
+            key: "category_id",
+            value: "{{document_category_id}}",
+            disabled: true,
+          },
+        ],
+        description:
+          "HR: all company records. Employee: own shared records. documents.read.team: explicitly team-visible direct-report documents only. expiry=expired or expiring (next 30 days in company time).",
+      }),
+      get("Find employees for upload", "/documents/people", {
+        query: pageQuery,
+        description:
+          "documents.manage required. Select employee_id from the intended employee; no automatic selection.",
+      }),
+      post("Upload employee document", "/documents", {
+        body: {
+          ...documentMetadata,
+          employee_id: "{{employee_id}}",
+          operation_id: "{{document_upload_operation_id}}",
+        },
+        multipart: true,
+        dto: "documents/document.dto:DocumentCreateDto",
+        save: idSave("document_id"),
+        description:
+          "HR only. Body > form-data: choose one local file in file field. PDF/PNG/JPEG, nonempty, max 10 MiB. Do not set Content-Type manually; Postman supplies the boundary. New operation UUID per new document; retain UUID and identical fields/file for retries. Visibility defaults to this example: hr_only.",
+      }),
+      get("Document details and versions", "/documents/{{document_id}}", {
+        save: "pm.environment.set('document_revision_id',data.revision);",
+        description:
+          "Captures revision for mutations. Select document_version_id explicitly from versions; earlier versions are retained. Private storage keys are never returned.",
+      }),
+      put("Edit document metadata", "/documents/{{document_id}}", {
+        body: { ...documentMetadata, ...documentAction },
+        dto: "documents/document.dto:DocumentUpdateDto",
+        description:
+          "HR only. Refresh detail first. Full metadata replacement; empty dates clear them. Changes apply to sharing of all versions.",
+      }),
+      post(
+        "Upload new document version",
+        "/documents/{{document_id}}/versions",
+        {
+          body: {
+            ...documentAction,
+            operation_id: "{{document_version_operation_id}}",
+          },
+          multipart: true,
+          dto: "documents/document.dto:DocumentUploadDto",
+          save: idSave("document_version_id"),
+          description:
+            "HR only. Choose file in form-data. New operation UUID per replacement; reuse for retry. Refresh detail revision before uploading. Prior files are retained.",
+        },
+      ),
+      get(
+        "Download document version",
+        "/documents/{{document_id}}/versions/{{document_version_id}}/download",
+        {
+          description:
+            "Authenticated binary attachment, no-store. Use Send and Download. HR can access retained archived files; employees/managers cannot. Every successful download is audited.",
+        },
+      ),
+      post(
+        "Archive document version",
+        "/documents/{{document_id}}/versions/{{document_version_id}}/archive",
+        {
+          body: documentAction,
+          dto: "documents/document.dto:DocumentActionDto",
+          description:
+            "HR only. Refresh detail revision first. Hides this version from employee/team; newest remaining active version becomes current. Cannot archive the last active version of an active document.",
+        },
+      ),
+      post("Archive document", "/documents/{{document_id}}/archive", {
+        body: documentAction,
+        dto: "documents/document.dto:DocumentActionDto",
+        description:
+          "HR only. Hides the entire document from employee/team. Files remain retained for HR and continue counting toward storage quota. No hard deletion or restore endpoint.",
+      }),
+    ],
+    "Private document library with audited uploads, immutable file versions, expiry metadata and scoped sharing. Select individual requests intentionally.",
+  ),
+);
+
+collection.item.push(folder('13 Dashboard and reports',[
+  get('Dashboard','/dashboard',{description:'Tenant dashboard. Each widget uses its domain company/team/self scope. Payroll status requires payroll.manage; payslips and balances are personal. No report permission is needed.'}),
+  get('Report options','/reports/options',{query:[{key:'kind',value:'{{report_kind}}'}],description:'Choose employees, attendance, leave, balances, payroll or components. Requires a reporting permission AND the matching domain permission. Returns scoped organization filters and payroll runs.'}),
+  get('Preview report','/reports/{{report_kind}}',{query:[...pageQuery,{key:'from',value:'{{report_from}}',disabled:true},{key:'to',value:'{{report_to}}',disabled:true},{key:'year',value:'{{leave_year}}',disabled:true},{key:'run_id',value:'{{payroll_run_id}}',disabled:true},{key:'employee_id',value:'{{employee_id}}',disabled:true},{key:'department_id',value:'{{department_id}}',disabled:true},{key:'location_id',value:'{{location_id}}',disabled:true},{key:'status',value:'',disabled:true}],description:'Default attendance uses month-to-date. Attendance: from/to <=31 days; leave requests: <=366 days. Balances: year. Payroll/components: enable run_id. Date/year/run filters are exclusive to their corresponding report. Max 5000 matching rows; 413 requires narrower filters.'}),
+  post('Export report CSV','/reports/{{report_kind}}/export',{body:{from:'{{report_from}}',to:'{{report_to}}'},dto:'reports/report.dto:ReportQueryDto',description:'Use Send and Download. Default body is for attendance or leave. For employees use {}; balances use {"year":2026}; payroll/components use {"run_id":"<payroll UUID>"}. Optional search/employee_id/department_id/location_id and supported status. Exports all matching rows, ignores pagination, capped at 5000. UTF-8 BOM, quoted and formula-safe. Export is audited and CSRF protected.'}),
+  post('Queue large CSV export','/reports/{{report_kind}}/export-jobs',{body:{operation_id:'{{report_export_operation_id}}',from:'{{report_from}}',to:'{{report_to}}'},dto:'reports/report-export.dto:ReportExportDto',save:idSave('report_export_job_id'),description:'202 Accepted. Requires jobs:worker. Default filters suit attendance/leave; employees: operation_id only; balances: add year; payroll/components: add run_id. Maximum 100000 rows/50 MiB. Reuse operation_id only to safely repeat the SAME request; use a new UUID for a fresh snapshot or changed filters. Limits: 3 active jobs per requester, 31 attendance days/366 leave days.'}),
+  get('My background exports','/report-exports',{query:[{key:'page',value:'1'},{key:'limit',value:'20'}]}),
+  get('Background export status','/report-exports/{{report_export_job_id}}',{description:'Owner only. Poll pending/running until completed/failed. Status includes progress and safe error codes; never file paths or report data.'}),
+  get('Download completed background CSV','/report-exports/{{report_export_job_id}}/download',{description:'Use Send and Download. Owner only and current report/domain/team access is checked again. Completed files expire after 24 hours (410); pending/failed returns 409. CSV is UTF-8 BOM, quoted and formula-safe.'}),
+  post('Retry failed background export','/report-exports/{{report_export_job_id}}/retry',{body:{},dto:'reports/report-export.dto:ExportRetryDto',description:'202 Accepted. Owner with current permission only; failed jobs only. Resets the three-attempt budget and queues the same filters. Expired/completed jobs require a new operation UUID.'}),
+], 'Operational reporting with tenant and domain scopes. Small synchronous CSV and large background CSV exports. XLSX/PDF reports remain outside this release.'));
+
+collection.item.push(folder('14 Notifications and email delivery',[
+  get('My notifications','/notifications',{query:[{key:'page',value:'1'},{key:'limit',value:'20'},{key:'status',value:'all'}],description:'Own notifications only. status=all|read|unread. Includes total and unread count plus an authorized-screen link; no invitation tokens or delivery payloads. Set notification_id manually from your own list.'}),
+  get('Unread notification count','/notifications/unread-count'),
+  put('Mark notification read or unread','/notifications/{{notification_id}}/read',{body:{read:true},dto:'notifications/notification.dto:NotificationReadDto',description:'Own notification only. Change read to false to mark it unread. Other users/tenants receive 404.'}),
+  put('Mark all my notifications read','/notifications/read-all',{body:{},dto:'notifications/notification.dto:NotificationRetryDto',description:'Marks your currently unread notifications read. Does not change another user’s inbox.'}),
+  get('Company email delivery status','/notifications/deliveries',{query:[{key:'page',value:'1'},{key:'limit',value:'20'},{key:'status',value:'failed'}],description:'company.manage required. status=pending|sent|failed|skipped, or disable status for all. Only delivery metadata is returned. Set notification_delivery_id explicitly from this list. Sent means SMTP accepted, not inbox delivery/read confirmation.'}),
+  post('Retry failed workflow email','/notifications/deliveries/{{notification_delivery_id}}/retry',{body:{},dto:'notifications/notification.dto:NotificationRetryDto',description:'company.manage required; failed non-invitation delivery only. Requeues the existing record and audits the action. Worker rechecks current recipient access. For failed invitations, use the existing replacement-invitation API to issue a fresh activation link. SMTP must be configured and the separate worker running.'}),
+], 'In-app workflow notifications and durable PostgreSQL outbox → Redis/BullMQ → SMTP delivery. SMTP is captured by local Mailpit in development; no general-purpose send-email API is exposed.'));
+
+collection.item.push(folder('15 Audit logs and activity history', [
+  get('Company audit history', '/audit-logs', { query: [...pageQuery, {key:'actor',value:'Admin',disabled:true}, {key:'module',value:'employee',disabled:true}, {key:'action',value:'employee.updated',disabled:true}, {key:'actor_id',value:'{{user_id}}',disabled:true}, {key:'entity_id',value:'{{employee_id}}',disabled:true}, {key:'from',value:'{{audit_from}}',disabled:true}, {key:'to',value:'{{audit_to}}',disabled:true}], description: 'company.manage required. Read-only, newest first; inclusive UTC dates. Actor searches current user name/email, case-insensitively as literal text. No raw metadata. Set audit_event_id from a chosen row. Tenant identity comes only from the session.' }),
+  get('Audit filter choices', '/audit-logs/options', {description:'Tenant-scoped action codes and module prefixes recorded in this company. company.manage required.'}),
+  get('Audit event details', '/audit-logs/{{audit_event_id}}', {description:'company.manage required. Own-tenant event only; unknown/cross-tenant IDs return 404. Selected safe operational details only; private reasons, payroll values, snapshots and credentials are excluded.'}),
+], 'Read-only company activity, including existing historical events. No edit/delete/export endpoint. System/platform entries may have no tenant actor. Current user identity is shown, not a historical name snapshot.'));
+
 const defaults = {
+  report_export_operation_id: '34570c60-ddb0-42f2-87d5-19ab7f992d8e',
+  report_export_job_id: '',
+  reset_token: '',
+  reset_password: '',
+  audit_event_id: '',
+  audit_from: '2026-10-01',
+  audit_to: '2026-10-08',
+  notification_id: '',
+  notification_delivery_id: '',
+  report_kind: 'attendance',
+  report_from: '2026-10-01',
+  report_to: '2026-10-07',
+  document_id: "",
+  document_version_id: "",
+  document_revision_id: "",
+  document_upload_operation_id: "4e7a25eb-4ad8-430e-87ed-f923639e4509",
+  document_version_operation_id: "c3dafee2-e629-4613-9c8d-c7d4976608aa",
+  document_issue_date: "2026-01-01",
+  document_expiry_date: "2027-01-01",
   base_url: "http://localhost:3000/api/v1",
   platform_email: "microhrms@yopmail.com",
   platform_password: "",
@@ -1079,6 +1283,8 @@ const defaults = {
   attendance_check_out: "2026-10-06T18:00:00+05:30",
   regularization_id: "",
   leave_year: "2026",
+  leave_assignment_operation_id: '81bc66a3-d8d5-4acb-96e5-cc4e8346e12c',
+  leave_assignment_job_id: '',
   leave_month: "2026-10",
   leave_start_date: "2026-10-08",
   leave_end_date: "2026-10-08",

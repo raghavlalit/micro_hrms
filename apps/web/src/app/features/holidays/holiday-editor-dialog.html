@@ -14,10 +14,13 @@
       ><mat-label>Holiday date</mat-label
       ><input
         matInput
-        type="date"
+        [matDatepicker]="datePicker1"
+        placeholder="YYYY-MM-DD"
         formControlName="holiday_date"
         min="1900-01-01"
         max="2200-12-31"
+      /><mat-datepicker-toggle matIconSuffix [for]="datePicker1" /><mat-datepicker
+        #datePicker1
       /><mat-error>Choose a valid date between 1900 and 2200.</mat-error></mat-form-field
     >
     <mat-form-field appearance="outline"

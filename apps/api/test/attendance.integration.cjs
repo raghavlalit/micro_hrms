@@ -178,6 +178,28 @@ async function main() {
         { decision, comment: 'Reviewed against work record' },
         cookie,
       );
+    const directory = await req('/attendance/people?active_only=true&search=Attendance%20STAFF&limit=1');
+    expectStatus(directory, 200);
+    assert.equal(directory.body.total, 1);
+    assert.equal(directory.body.items[0].id, staff.id);
+    assert.ok(directory.body.items[0].location_name);
+    const reports = await team('/people?active_only=true');
+    expectStatus(reports, 200);
+    assert.deepEqual(reports.body.items.map(row => row.id), [staff.id]);
+    const page1 = await req('/attendance/people?active_only=true&limit=1&page=1');
+    const page2 = await req('/attendance/people?active_only=true&limit=1&page=2');
+    assert.equal(page1.body.total, page2.body.total);
+    assert.notEqual(page1.body.items[0].id, page2.body.items[0].id);
+    await db.query("UPDATE employees SET status='inactive' WHERE id=$1", [other.id]);
+    assert.equal((await req('/attendance/people?active_only=true&search=OTHER')).body.total, 0);
+    assert.equal((await req('/attendance/people?search=OTHER')).body.total, 1);
+    await db.query("UPDATE employees SET status='on_notice' WHERE id=$1", [other.id]);
+    assert.equal((await req('/attendance/people?active_only=true&search=OTHER')).body.total, 1);
+    await db.query("UPDATE employees SET status='active' WHERE id=$1", [other.id]);
+    const foreignDirectory = await request('/attendance/people?active_only=true&search=STAFF', 'GET', undefined, b.cookie);
+    assert.equal(foreignDirectory.body.total, 0);
+    expectStatus(await req('/attendance/people?active_only=invalid'), 400);
+    pass('active employee directory, full-name search, paging, manager scope and tenant isolation');
     expectStatus(await request('/attendance/me'), 401);
     expectStatus(
       await request('/attendance/people', 'GET', undefined, platform.cookie),

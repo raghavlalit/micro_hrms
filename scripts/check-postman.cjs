@@ -47,6 +47,28 @@ function scripts(items) {
         item.request?.url && item.request.method && item.event?.length,
         "Invalid request structure",
       );
+    if (item.request?.body?.mode === "formdata") {
+      assert(
+        !item.request.header.some(
+          (header) => header.key.toLowerCase() === "content-type",
+        ),
+        "Postman must supply the multipart boundary",
+      );
+      const files = item.request.body.formdata.filter(
+        (field) => field.type === "file",
+      );
+      assert.equal(
+        files.length,
+        1,
+        "Each document upload requires one file field",
+      );
+      assert.equal(files[0].key, "file");
+      assert.deepEqual(
+        files[0].src,
+        [],
+        "Do not commit a personal upload path",
+      );
+    }
   }
 }
 scripts([{ item: actual.item, event: actual.event }]);
@@ -58,6 +80,7 @@ for (const key of Object.keys(samples)) {
     samples[key] = "Postman contract validation only 123!";
 }
 samples.activation_token = uuid + "." + "a".repeat(64);
+samples.reset_token = uuid + '.r.' + 'a'.repeat(64);
 let dtoCount = 0;
 for (const binding of bindings) {
   if (!binding.dto) continue;

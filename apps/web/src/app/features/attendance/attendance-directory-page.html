@@ -1,0 +1,90 @@
+﻿<main class="page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">TIME &amp; ATTENDANCE</p>
+      <h1>Employee attendance</h1>
+      <p class="muted">
+        {{ companyAccess ? 'Company' : 'Direct-report' }} active employees, including employees
+        serving notice. Open an employee to review their monthly attendance.
+      </p>
+    </div>
+    <div class="row-actions">
+      @if (selfAllowed) {
+        <a mat-stroked-button routerLink="/attendance/me">My attendance</a>
+      }
+      <a mat-stroked-button routerLink="/attendance/requests">Corrections &amp; approvals</a>
+    </div>
+  </div>
+  <form class="panel attendance-filters" (ngSubmit)="load(true)">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic"
+      ><mat-label>Employee name or code</mat-label
+      ><input matInput name="search" [(ngModel)]="search" maxlength="100"
+    /></mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic"
+      ><mat-label>Attendance month</mat-label
+      ><input matInput type="month" name="month" [(ngModel)]="month" min="1900-01" max="2200-12"
+    /></mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="loading()">Search</button>
+    <span class="muted">Leave month empty for the current company month.</span>
+  </form>
+  @if (error()) {
+    <p class="message error" role="alert">
+      {{ error() }} <button mat-button (click)="load()">Retry</button>
+    </p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading employees" />
+  }
+  <section class="panel" aria-label="Active employees" [attr.aria-busy]="loading()">
+    <div class="attendance-filters">
+      <strong>{{ total() }} employees</strong>
+    </div>
+    <div class="directory-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Employee code</th>
+            <th>Department</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (person of people(); track person.id) {
+            <tr>
+              <td>{{ person.name }}</td>
+              <td>{{ person.employee_code }}</td>
+              <td>{{ person.department_name || '—' }}</td>
+              <td>{{ person.location_name || '—' }}</td>
+              <td>{{ person.status === 'on_notice' ? 'On notice' : 'Active' }}</td>
+              <td>
+                <a
+                  mat-button
+                  [routerLink]="['/attendance/employees', person.id]"
+                  [queryParams]="query"
+                  [attr.aria-label]="'View attendance for ' + person.name"
+                  >View attendance</a
+                >
+              </td>
+            </tr>
+          } @empty {
+            @if (!loading() && !error()) {
+              <tr>
+                <td colspan="6">No active employees match your search.</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="attendance-filters">
+      <button mat-button [disabled]="loading() || page <= 1" (click)="step(-1)">Previous</button
+      ><span>Page {{ page }}</span
+      ><button mat-button [disabled]="loading() || page * limit >= total()" (click)="step(1)">
+        Next
+      </button>
+    </div>
+  </section>
+</main>

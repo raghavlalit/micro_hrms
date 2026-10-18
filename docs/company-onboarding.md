@@ -20,10 +20,12 @@ complete the password change first. Choose **Open company dashboard**.
 1. Enter the company profile, lowercase unique company code and first admin's
    name/email. The initial plan is the existing Trial plan. Limits are read from
    that plan, not supplied by the browser.
-2. Create the company. Company, defaults, invited administrator, role assignment,
-   activation-token hash and audit entry are saved in one transaction.
+2. Create the company. Company, defaults, invited administrator, linked employee,
+   role assignment, activation-token hash and audit entries are saved in one transaction.
 3. Copy the activation link shown once and share it securely with that admin.
-   No email is sent. Links expire after 24 hours. The secret is in the URL fragment,
+   With SMTP enabled and the notification worker running, an activation email is
+   also queued; see [notification setup](notifications.md). Links expire after
+   24 hours. The secret is in the URL fragment,
    not its query string; the activation page clears the fragment immediately.
 4. The admin opens the link and sets a 15–128 character password. The invitation
    can be consumed only once. Activation does not automatically create a session.
@@ -45,13 +47,16 @@ idempotency-key replay mechanism is implemented.
 - Ten departments and twelve designations.
 - Head Office and the default work schedule.
 - Four leave types, seven salary components and eight document categories.
-- One invited company administrator assigned the company-admin role.
+- One invited company administrator assigned the company-admin role, with a linked
+  employee profile. Invitation activation also activates the employee.
 
 The onboarding template remains in
 `apps/api/src/modules/tenants/seeds/master-data.seed.ts`. Companies receive their
 own copies. Editing a company's records or changing the template does not alter
-another company's records. No employees, salary amounts or leave balances are
-created. Holidays and leave policies deliberately start empty.
+another company's records. The administrator is the initial employee. No salary
+amounts or leave balances are created. Holidays and leave policies start empty.
+See [administrator employee profiles](admin-employee-profiles.md) for defaults and
+how to repair a named existing administrator without duplicating their account.
 
 Trial duration has not been specified: creation records its start time but does
 not invent an automatic expiration date. Finalize subscription lifecycle rules
@@ -129,7 +134,7 @@ Migration `CompanyOnboarding1791260000000` adds no tables. It permits company
 catalog reads and inserts only in a transaction with a verified, unexpired platform
 session. It does not grant platform scope access to tenant HR tables. Tenant
 profile updates have column-limited grants. There are still 42 application tables
-and 37 tenant RLS tables; there are now five migrations.
+and 37 tenant RLS tables. Run `npm run db:status` for the current migration list.
 
 ## Verification
 

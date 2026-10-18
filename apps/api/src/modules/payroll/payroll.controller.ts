@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -18,6 +19,7 @@ import type { AuthRequest } from '../auth/auth.guard';
 import { PayrollRunService } from './payroll-run.service';
 import { SalaryService } from './salary.service';
 import { PayslipService } from './payslip.service';
+import { PayslipGeneration } from './payslip-generation.service';
 import {
   PayrollAdjustmentDto,
   PayrollAdjustmentEditDto,
@@ -36,6 +38,7 @@ export class PayrollController {
     readonly runs: PayrollRunService,
     readonly salaries: SalaryService,
     readonly slips: PayslipService,
+    readonly generation: PayslipGeneration,
   ) {}
   @Get('settings') settings(@Req() r: AuthRequest) {
     return this.runs.settings(r.principal);
@@ -109,12 +112,18 @@ export class PayrollController {
   ) {
     return this.runs.transition(r.principal, id, dto, true);
   }
-  @Post('runs/:id/publish') publish(
+  @Get('runs/:id/payslip-job') generationStatus(
+    @Req() r: AuthRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.generation.status(r.principal, id);
+  }
+  @Post('runs/:id/publish') @HttpCode(202) publish(
     @Req() r: AuthRequest,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: PayrollTransitionDto,
   ) {
-    return this.slips.publish(r.principal, id, dto);
+    return this.generation.enqueue(r.principal, id, dto);
   }
   @Post('employees/:id/adjustments') adjust(
     @Req() r: AuthRequest,

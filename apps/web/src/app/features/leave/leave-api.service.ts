@@ -28,6 +28,12 @@ export class LeaveApi {
   policies() {
     return this.http.get<LeavePolicyOption[]>('/api/v1/leave/policies');
   }
+  assignmentPolicies(employeeId: string, year: number) {
+    return this.http.get<LeavePolicyOption[]>(
+      `/api/v1/leave/assignments/employees/${employeeId}/policies`,
+      { params: { year } },
+    );
+  }
   setup(employeeId: string, body: object) {
     return this.http.post(`/api/v1/leave/employees/${employeeId}/entitlements`, body, this.options);
   }

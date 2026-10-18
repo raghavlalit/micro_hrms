@@ -6,6 +6,17 @@
     "apps/*"
   ],
   "scripts": {
+    "jobs:worker": "npm run build:api && node apps/api/dist/modules/background-jobs/worker-main.js",
+    "jobs:test": "npm run build:api && node apps/api/test/background-jobs.integration.cjs",
+    "recovery:test": "npm run build:api && node apps/api/test/password-recovery.integration.cjs",
+    "audit:test": "npm run build:api && node apps/api/test/audit.integration.cjs",
+    "notifications:setup": "node scripts/setup-notifications-env.cjs",
+    "notifications:up": "docker compose up -d --wait redis mailpit",
+    "notifications:stop": "docker compose stop redis mailpit",
+    "notifications:worker": "npm run build:api && node apps/api/dist/modules/notifications/worker-main.js",
+    "notifications:test": "npm run build:api && node apps/api/test/notifications.integration.cjs",
+    "reports:test": "npm run build:api && node apps/api/test/reports.integration.cjs",
+    "documents:test": "npm run build:api && node apps/api/test/documents.integration.cjs && node apps/api/test/document-storage.integration.cjs",
     "payroll:test": "npm run build:api && node apps/api/test/payroll.integration.cjs",
     "leave:test": "npm run build:api && node apps/api/test/leave.integration.cjs",
     "attendance:test": "npm run build:api && node apps/api/test/attendance.integration.cjs",

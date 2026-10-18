@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,88 +6,21 @@ import {
 import type { Principal } from '../auth/auth.service';
 import { Employee } from '../employees/employee.schemas';
 import { PayrollContext } from './payroll-context.service';
-import { PayrollRunService } from './payroll-run.service';
 import {
   Payslip,
   PayrollEmployee,
   PayrollLine,
   PayrollRun,
 } from './payroll.schemas';
-import { PayrollListDto, PayrollTransitionDto } from './payroll.dto';
+import { PayrollListDto } from './payroll.dto';
 import { PayslipStorage } from './payslip-storage.service';
-import { payslipPdf } from './payslip-pdf';
 import type { PayrollSnapshot } from './payroll-calculation.service';
 @Injectable()
 export class PayslipService {
   constructor(
     readonly context: PayrollContext,
-    readonly runs: PayrollRunService,
     readonly storage: PayslipStorage,
   ) {}
-  publish(actor: Principal, id: string, dto: PayrollTransitionDto) {
-    return this.context.write(actor, async (manager) => {
-      const run = await this.context.run(manager, actor.tenantId!, id);
-      if (run.status !== 'locked')
-        throw new ConflictException('Lock payroll before publishing payslips');
-      this.runs.current(run, dto.revision);
-      if (Number(run.calculation_version) !== dto.calculation_version)
-        throw new ConflictException('Payroll version changed');
-      if (run.published_at) return { id, published: true, replayed: true };
-      const items = await this.runs.items(manager, actor.tenantId!, run);
-      if (!items.length)
-        throw new ConflictException('No calculated employees to publish');
-      for (const item of items) {
-        const lines = await manager
-          .getRepository(PayrollLine)
-          .find({
-            where: {
-              tenant_id: actor.tenantId,
-              payroll_employee_id: String(item.id),
-            },
-            order: { kind: 'DESC', component_code: 'ASC', id: 'ASC' },
-          });
-        const file = await payslipPdf({
-          id: String(item.id),
-          period_start: String(run.period_start),
-          period_end: String(run.period_end),
-          pay_date: String(run.pay_date),
-          locked_at: new Date(run.locked_at as Date),
-          gross: String(item.gross),
-          deductions: String(item.deductions),
-          net: String(item.net),
-          snapshot: item.input_snapshot as PayrollSnapshot,
-          lines: lines.map((line) => ({
-            component_name: String(line.component_name),
-            kind: String(line.kind),
-            amount: String(line.amount),
-          })),
-        });
-        const key = `${actor.tenantId}/${String(item.id)}.pdf`;
-        await this.storage.save(key, file);
-        await manager
-          .getRepository(Payslip)
-          .insert({
-            id: String(item.id),
-            tenant_id: actor.tenantId,
-            payroll_employee_id: item.id,
-            object_key: key,
-            status: 'published',
-            published_at: new Date(),
-          });
-      }
-      await manager
-        .getRepository(PayrollRun)
-        .update(
-          { tenant_id: actor.tenantId, id },
-          { published_at: new Date() },
-        );
-      await this.context.audit(manager, actor, id, 'payslips_published', {
-        count: items.length,
-        reason: dto.reason,
-      });
-      return { id, published: true, count: items.length };
-    });
-  }
   list(actor: Principal, dto: PayrollListDto) {
     return this.context.tenants.withTenant(actor.tenantId!, async (manager) => {
       if (!actor.permissions.includes('payslips.read.self'))
@@ -166,24 +98,20 @@ export class PayslipService {
       if (!actor.permissions.includes('payroll.manage')) {
         const owns =
           actor.permissions.includes('payslips.read.self') &&
-          (await manager
-            .getRepository(Employee)
-            .existsBy({
-              tenant_id: actor.tenantId,
-              id: String(item.employee_id),
-              user_id: actor.id,
-            }));
+          (await manager.getRepository(Employee).existsBy({
+            tenant_id: actor.tenantId,
+            id: String(item.employee_id),
+            user_id: actor.id,
+          }));
         if (!owns) throw new NotFoundException('Payslip not found');
       }
-      const lines = await manager
-        .getRepository(PayrollLine)
-        .find({
-          where: {
-            tenant_id: actor.tenantId,
-            payroll_employee_id: String(item.id),
-          },
-          order: { kind: 'DESC', component_code: 'ASC', id: 'ASC' },
-        });
+      const lines = await manager.getRepository(PayrollLine).find({
+        where: {
+          tenant_id: actor.tenantId,
+          payroll_employee_id: String(item.id),
+        },
+        order: { kind: 'DESC', component_code: 'ASC', id: 'ASC' },
+      });
       return {
         id,
         period_start: run.period_start,

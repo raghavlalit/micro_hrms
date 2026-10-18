@@ -20,9 +20,12 @@
           ><input
             matInput
             name="notice_date"
-            type="date"
+            [matDatepicker]="datePicker1"
+            placeholder="YYYY-MM-DD"
             [(ngModel)]="notice_date"
             required
+          /><mat-datepicker-toggle matIconSuffix [for]="datePicker1" /><mat-datepicker
+            #datePicker1
           /><mat-error>Enter the notice date.</mat-error></mat-form-field
         >
       }
@@ -32,9 +35,12 @@
           ><input
             matInput
             name="termination_date"
-            type="date"
+            [matDatepicker]="datePicker2"
+            placeholder="YYYY-MM-DD"
             [(ngModel)]="termination_date"
             required
+          /><mat-datepicker-toggle matIconSuffix [for]="datePicker2" /><mat-datepicker
+            #datePicker2
           /><mat-error>Enter the termination date.</mat-error></mat-form-field
         >
       }

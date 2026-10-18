@@ -11,6 +11,7 @@ import * as notifications from '../modules/notifications/notification.schemas';
 import * as audit from '../modules/audit/audit.schemas';
 import * as auth from '../modules/auth/auth.schemas';
 import * as platform from '../modules/platform/platform.schemas';
+import * as backgroundJobs from '../modules/background-jobs/background-job.schemas';
 export const entities = [
   tenants,
   users,
@@ -25,4 +26,5 @@ export const entities = [
   audit,
   auth,
   platform,
+  backgroundJobs,
 ].flatMap(Object.values);

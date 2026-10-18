@@ -300,7 +300,7 @@ async function main() {
     );
     const unlinked = (await req('/holidays/calendar?year=2026&scope=mine'))
       .body;
-    assert.equal(unlinked.linked_employee, false);
+    assert.equal(unlinked.linked_employee, true); // Admin now has an employee, with no location assigned.
     assert.deepEqual(
       unlinked.items.map((h) => h.name),
       ['Company Day'],

@@ -16,10 +16,10 @@ export class AttendanceApi {
       { params: month ? { month } : {} },
     );
   }
-  people(search: string, page = 1) {
+  people(search: string, page = 1, limit = 50, activeOnly = false) {
     return this.http.get<{ items: AttendancePerson[]; total: number }>(
       '/api/v1/attendance/people',
-      { params: { search, page, limit: 50 } },
+      { params: { search, page, limit, active_only: String(activeOnly) } },
     );
   }
   check(out: boolean) {

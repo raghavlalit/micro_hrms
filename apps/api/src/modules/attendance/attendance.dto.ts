@@ -24,6 +24,9 @@ export class AttendancePeopleDto {
   @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) search?: string;
 }
+export class AttendanceDirectoryDto extends AttendancePeopleDto {
+  @IsOptional() @IsIn(['true', 'false']) active_only?: string;
+}
 export class RegularizationListDto extends AttendancePeopleDto {
   @IsOptional() @IsIn(['mine', 'review']) scope?: 'mine' | 'review';
   @IsOptional() @IsIn(['pending', 'approved', 'rejected']) status?: string;

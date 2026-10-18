@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { BackgroundJobsModule } from '../background-jobs/background-jobs.module';
+import { PayslipGeneration } from './payslip-generation.service';
+import { NotificationEventsModule } from '../notifications/notification-events.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { PayrollSettingsController } from './payroll-settings.controller';
 import { TenantContextModule } from '../tenants/tenant-context.module';
@@ -14,6 +17,8 @@ import { PayslipService } from './payslip.service';
 import { PayslipStorage } from './payslip-storage.service';
 @Module({
   imports: [
+    BackgroundJobsModule,
+    NotificationEventsModule,
     TenantsModule,
     TenantContextModule,
     EmployeePayrollModule,
@@ -26,6 +31,7 @@ import { PayslipStorage } from './payslip-storage.service';
     PayslipController,
   ],
   providers: [
+    PayslipGeneration,
     PayrollContext,
     SalaryService,
     PayrollCalculationService,
@@ -33,5 +39,6 @@ import { PayslipStorage } from './payslip-storage.service';
     PayslipService,
     PayslipStorage,
   ],
+  exports: [PayslipService, PayslipGeneration],
 })
 export class PayrollModule {}

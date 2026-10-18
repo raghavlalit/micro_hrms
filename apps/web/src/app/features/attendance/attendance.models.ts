@@ -44,6 +44,8 @@ export interface AttendanceCalendar {
   };
 }
 export interface AttendancePerson {
+  department_name?: string | null;
+  location_name?: string | null;
   id: string;
   name: string;
   employee_code: string;

@@ -25,6 +25,7 @@ export const EmployeeDocument = schema(
     issue_date: date(true),
     expiry_date: date(true),
     visibility: state('hr_only'),
+    revision: { type: 'uuid', generated: 'uuid' },
     archived_at: timestamp(true),
   },
   {

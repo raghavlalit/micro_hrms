@@ -16,6 +16,8 @@ inline SVG icons are kept in the shared UI folder.
 - `/company/overview`: setup shortcuts filtered by the user's permissions. It
   does not display invented employee, attendance or payroll statistics.
 - `/company/settings`: company profile, contact details and regional preferences.
+- `/documents` and `/documents/:id`: scoped document library, upload/metadata
+  dialogs, expiry filters, version history, archive actions and private downloads.
 - Existing organization, leave, payroll, document and holiday routes: searchable,
   paginated master lists and separate add/edit views. Status filtering is available
   where the master supports an active flag.
@@ -73,3 +75,23 @@ Employee management is now available; its additional migration and encryption
 setup are documented in [Employee management](employee-management.md).
 The dedicated [Holiday calendar](holiday-calendar.md) provides monthly/annual
 views, upcoming entries and location-scoped employee access.
+
+## Date inputs
+
+Date fields use the existing Angular Material date picker with a visible calendar
+button, keyboard navigation, month/year navigation, and typed `YYYY-MM-DD` input.
+Employee profiles/lifecycle dates, leave requests and policies, holidays, payroll,
+document dates, audit filters and report filters share the same implementation.
+Required fields and existing date limits remain enforced. Optional dates can be
+cleared. Month-only selectors still use their existing `YYYY-MM` controls.
+
+`shared/ui/calendar.module.ts` supplies a date-only string adapter through
+`MATERIAL_FORM_IMPORTS`. It uses local calendar components rather than UTC
+serialization, so selecting a day cannot shift the API value across time zones.
+Both template-driven and reactive forms retain their existing string models.
+No extra package, database migration or API contract change is required.
+
+`app.config.ts` also registers `CALENDAR_DATE_PROVIDERS` from
+`shared/ui/calendar-date-adapter.ts` in the application environment
+injector. This is required for date pickers inside Material dialogs and overlays;
+standalone feature imports alone do not cover that injection context.

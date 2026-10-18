@@ -1,0 +1,151 @@
+<h2 mat-dialog-title>{{ title }}</h2>
+<form #form="ngForm" (ngSubmit)="save(form)">
+  <mat-dialog-content>
+    @if (error()) {
+      <p class="message error" role="alert">{{ error() }}</p>
+    }
+    @if (data.document) {
+      <p>{{ data.document.employee_name }} · {{ data.document.title }}</p>
+    }
+    @if (data.action === 'create') {
+      <div class="search-row">
+        <mat-form-field appearance="outline"
+          ><mat-label>Find employee</mat-label
+          ><input
+            matInput
+            name="search"
+            [(ngModel)]="search"
+            (keydown.enter)="$event.preventDefault(); find(true)" /></mat-form-field
+        ><button mat-button type="button" (click)="find(true)" [disabled]="finding() || busy()">
+          Search
+        </button>
+      </div>
+      <mat-form-field appearance="outline" class="full-width"
+        ><mat-label>Employee</mat-label
+        ><mat-select name="employee" [(ngModel)]="employeeId" required>
+          @for (person of people(); track person.id) {
+            <mat-option [value]="person.id"
+              >{{ person.name }} · {{ person.employee_code }}</mat-option
+            >
+          }
+        </mat-select></mat-form-field
+      >
+      @if (total > 50) {
+        <div class="actions">
+          <button mat-button type="button" (click)="step(-1)" [disabled]="page === 1 || finding()">
+            Previous employees</button
+          ><span>Page {{ page }}</span
+          ><button
+            mat-button
+            type="button"
+            (click)="step(1)"
+            [disabled]="page * 50 >= total || finding()"
+          >
+            Next employees
+          </button>
+        </div>
+      }
+    }
+    @if (data.action === 'create' || data.action === 'edit') {
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="wide"
+          ><mat-label>Document title</mat-label
+          ><input
+            matInput
+            name="title"
+            [(ngModel)]="name"
+            required
+            maxlength="160" /></mat-form-field
+        ><mat-form-field appearance="outline"
+          ><mat-label>Category</mat-label
+          ><mat-select name="category" [(ngModel)]="categoryId" required>
+            @for (category of categories(); track category.id) {
+              <mat-option [value]="category.id">{{ category.name }}</mat-option>
+            }
+          </mat-select></mat-form-field
+        ><mat-form-field appearance="outline"
+          ><mat-label>Visibility</mat-label
+          ><mat-select name="visibility" [(ngModel)]="visibility"
+            ><mat-option value="hr_only">HR only</mat-option
+            ><mat-option value="employee">HR and employee</mat-option
+            ><mat-option value="team">HR, employee and permitted manager</mat-option></mat-select
+          ></mat-form-field
+        ><mat-form-field appearance="outline"
+          ><mat-label>Issue date (optional)</mat-label
+          ><input
+            matInput
+            [matDatepicker]="datePicker1"
+            placeholder="YYYY-MM-DD"
+            name="issue"
+            [(ngModel)]="issueDate" /><mat-datepicker-toggle
+            matIconSuffix
+            [for]="datePicker1" /><mat-datepicker #datePicker1 /></mat-form-field
+        ><mat-form-field appearance="outline"
+          ><mat-label>Expiry date (optional)</mat-label
+          ><input
+            matInput
+            [matDatepicker]="datePicker2"
+            placeholder="YYYY-MM-DD"
+            name="expiry"
+            [(ngModel)]="expiryDate" /><mat-datepicker-toggle
+            matIconSuffix
+            [for]="datePicker2" /><mat-datepicker #datePicker2
+        /></mat-form-field>
+      </div>
+      <p class="muted">
+        Manager access requires a separate document permission and a current direct reporting
+        relationship.
+      </p>
+    }
+    @if (data.action === 'create' || data.action === 'version') {
+      <div class="file-box">
+        <label for="document-file">Select file</label
+        ><input
+          id="document-file"
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          (change)="selectFile($event)"
+          [disabled]="busy()"
+        />
+        <p class="muted">PDF, PNG or JPEG · Maximum 10 MiB. Upload only trusted files.</p>
+        @if (data.action === 'version') {
+          <p>Previous versions stay in history. Visibility and dates remain unchanged.</p>
+        }
+      </div>
+    }
+    @if (data.action === 'archive') {
+      <p>
+        {{
+          data.version
+            ? 'Version ' +
+              data.version.version +
+              ' will be hidden from employees and managers. The newest remaining available version becomes current.'
+            : 'This document and all its versions will be hidden from employees and managers.'
+        }}
+        HR retains the files and history. This action does not delete stored files.
+      </p>
+    }
+    <mat-form-field appearance="outline" class="full-width"
+      ><mat-label>Reason</mat-label
+      ><textarea
+        matInput
+        name="reason"
+        [(ngModel)]="reason"
+        required
+        minlength="3"
+        maxlength="500"
+        rows="2"
+      ></textarea>
+    </mat-form-field>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" />
+    }</mat-dialog-content
+  ><mat-dialog-actions align="end"
+    ><button mat-button type="button" mat-dialog-close [disabled]="busy()">Close</button
+    ><button mat-flat-button type="submit" [disabled]="busy()">
+      {{
+        data.action === 'archive' ? 'Archive' : data.action === 'edit' ? 'Save changes' : 'Upload'
+      }}
+    </button></mat-dialog-actions
+  >
+</form>

@@ -217,6 +217,12 @@ export class AuthService {
         principal.id,
         newHash,
       );
+      if (principal.tenantId)
+        await this.repository.invalidatePasswordResets(
+          manager,
+          principal.tenantId,
+          principal.id,
+        );
       await this.repository.revokeSessions(
         manager,
         principal.tenantId,

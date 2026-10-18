@@ -4,7 +4,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { AttendanceEditDialog } from './attendance-edit-dialog';
+import { DatePipe } from '@angular/common';
+import { AttendancePage } from './attendance-page';
 describe('Attendance time handling', () => {
+  it('keeps calendar dates unchanged when formatting attendance and today labels', () => {
+    const pipe = new DatePipe('en-GB');
+    const calendarDate = AttendancePage.prototype.calendarDate;
+    expect(pipe.transform(calendarDate('2026-10-01'), 'EEE, d MMM', 'UTC')).toBe('Thu, 1 Oct');
+    expect(pipe.transform(calendarDate('2026-10-31'), 'EEE, d MMM', 'UTC')).toBe('Sat, 31 Oct');
+    expect(pipe.transform(calendarDate('2028-02-29'), 'EEE, d MMM', 'UTC')).toBe('Tue, 29 Feb');
+    expect(pipe.transform(calendarDate('2027-01-01'), 'yyyy-MM-dd', 'UTC')).toBe('2027-01-01');
+  });
   it('converts company times independently of browser timezone and preserves half-hour offsets', () => {
     expect(companyTimeToIso('2026-10-06', '09:00', 'Asia/Kolkata')).toBe(
       '2026-10-06T03:30:00.000Z',

@@ -28,6 +28,9 @@
         <p>
           Credit the reviewed annual amount. No automatic proration or monthly accrual is applied.
         </p>
+        @if (!policies().length) {
+          <p>No unassigned applicable policies are available for this employee and year.</p>
+        }
         <mat-form-field appearance="outline"
           ><mat-label>Policy</mat-label
           ><mat-select

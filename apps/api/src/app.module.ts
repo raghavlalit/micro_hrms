@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from './modules/audit/audit.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { createObserveModule } from '@nestjs/observe';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -14,6 +16,8 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -35,6 +39,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       envFilePath: apiEnvPath,
     }),
     DatabaseModule,
+    AuditModule,
+    NotificationsModule,
     AuthModule,
     PlatformModule,
     OrganizationModule,
@@ -44,6 +50,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     HolidaysModule,
     EmployeesModule,
     AttendanceModule,
+    ReportsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

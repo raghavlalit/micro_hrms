@@ -9,6 +9,7 @@ import type { Principal } from '../auth/auth.service';
 import { LeaveAccess } from './leave-access.service';
 import { EmployeeLeavePolicy, LeavePolicy, LeaveType } from './leave.schemas';
 import { LeavePolicyDto, LeaveTypeDto } from './leave-settings.dto';
+import { Department, Location } from '../organization/organization.schemas';
 
 @Injectable()
 export class LeaveSettingsService {
@@ -29,6 +30,21 @@ export class LeaveSettingsService {
           throw new NotFoundException('Leave setting not found');
         if (schema === LeavePolicy) {
           const policy = dto as LeavePolicyDto;
+          for (const [key, entity] of [
+            ['department_id', Department],
+            ['location_id', Location],
+          ] as const) {
+            const scopeId = policy.applicability?.[key];
+            if (
+              scopeId &&
+              !(await manager
+                .getRepository(entity)
+                .existsBy({ id: scopeId, tenant_id: actor.tenantId }))
+            )
+              throw new BadRequestException(
+                'Policy scope must belong to this company',
+              );
+          }
           if (
             policy.effective_to &&
             policy.effective_to < policy.effective_from

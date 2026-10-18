@@ -1,4 +1,9 @@
 import { Module } from '@nestjs/common';
+import { BackgroundJobsModule } from '../background-jobs/background-jobs.module';
+import { LeaveAssignmentDirectory } from './leave-assignment-directory.service';
+import { LeaveAssignmentJobs } from './leave-assignment-jobs.service';
+import { LeaveAssignmentController } from './leave-assignment.controller';
+import { NotificationEventsModule } from '../notifications/notification-events.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { LeaveSettingsController } from './leave-settings.controller';
 import { AttendanceModule } from '../attendance/attendance.module';
@@ -13,14 +18,23 @@ import { LeaveController } from './leave.controller';
 import { LeaveSettingsService } from './leave-settings.service';
 @Module({
   imports: [
+    BackgroundJobsModule,
+    NotificationEventsModule,
     TenantsModule,
     TenantContextModule,
     AttendanceModule,
     HolidaysModule,
     LeaveAttendanceModule,
   ],
-  controllers: [LeaveSettingsController, LeaveController],
+  controllers: [
+    LeaveSettingsController,
+    LeaveController,
+    LeaveAssignmentController,
+  ],
+  exports: [LeaveQueryService, LeaveAssignmentJobs],
   providers: [
+    LeaveAssignmentDirectory,
+    LeaveAssignmentJobs,
     LeaveAccess,
     LeaveBalanceService,
     LeaveRequestService,

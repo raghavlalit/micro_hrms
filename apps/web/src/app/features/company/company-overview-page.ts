@@ -13,6 +13,13 @@ export class CompanyOverviewPage {
   readonly session = inject(SessionService);
   readonly cards = [
     {
+      title: 'Documents',
+      description: 'Private employee files, sharing, versions and expiry dates.',
+      path: '/documents',
+      icon: 'document',
+      permission: 'documents.manage|documents.read.self|documents.read.team',
+    },
+    {
       title: 'Payroll',
       description: 'Salary structures, monthly calculations, review and publication.',
       path: '/payroll',

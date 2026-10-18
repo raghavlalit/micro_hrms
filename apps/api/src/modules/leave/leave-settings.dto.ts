@@ -10,14 +10,27 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
+  ValidateIf,
+  IsObject,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { NamedMasterDto } from '../organization/organization.dto';
 
 export class LeaveTypeDto extends NamedMasterDto {
   @IsOptional() @IsString() @MaxLength(500) description?: string;
   @IsBoolean() is_active: boolean;
 }
+export class LeavePolicyApplicabilityDto {
+  @IsOptional() @IsUUID() department_id?: string | null;
+  @IsOptional() @IsUUID() location_id?: string | null;
+}
 export class LeavePolicyDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LeavePolicyApplicabilityDto)
+  applicability?: LeavePolicyApplicabilityDto;
   @IsUUID() leave_type_id: string;
   @IsString() @MinLength(1) @MaxLength(120) name: string;
   @IsNumber({ maxDecimalPlaces: 2 })

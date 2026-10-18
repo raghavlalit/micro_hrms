@@ -1,7 +1,7 @@
 # Leave management
 
 The leave year is **January–December**, as agreed. Open **Leave** in the workspace
-for balances, requests and the approved-leave calendar. Existing leave type and
+for assignments, balances, requests and the approved-leave calendar. Existing leave type and
 policy editors remain under Policies & Settings.
 
 ## Initial setup
@@ -10,8 +10,8 @@ policy editors remain under Policies & Settings.
    balance control, nonworking-day exclusion, carry-forward and effective dates.
 2. Link each employee to their user and assign an unambiguous work schedule.
    Their current reporting manager controls direct-report approval scope.
-3. As HR/company admin, open Leave, choose the employee and year, and select
-   **Assign entitlement**. Select a policy and review the credited amount.
+3. As HR/company admin, open Leave, filter the employee directory by year, and use
+   the row's **Assign leave** action. Select an applicable policy and review the credited amount.
    This atomically creates the year's balance and explicit employee assignment.
 4. Assignment dates are the intersection of the calendar year, policy dates and
    employment dates. There is one entitlement per employee/leave type/year.
@@ -19,6 +19,12 @@ policy editors remain under Policies & Settings.
 5. The annual credit defaults to the policy entitlement. HR can supply a reviewed
    prorated/opening amount. There is no automatic proration or monthly accrual.
    For uncontrolled policies, use zero credit and zero carry-forward.
+
+The directory shows fully assigned, partially assigned and unassigned counts.
+For many employees, select rows or all matching pages and use **Assign selected**.
+Review the preview before confirming background processing. Existing balances are
+skipped and preserved. See [employee leave assignment](leave-assignments.md) for
+scope rules, progress, retries and worker setup.
 
 Carry-forward is an explicit HR transfer when assigning the new year. The policy
 must permit it, the immediately previous year must have enough available balance,

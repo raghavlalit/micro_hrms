@@ -10,12 +10,16 @@ permission. Platform administrators cannot use these tenant endpoints.
 2. Choose **Invite user** to create a company login with one or more roles.
    Supply the person's name, email and an audit reason. The account reserves a
    user-plan place immediately. Share the returned activation link securely; no
-   email is sent until the notification/email provider is implemented.
+   email is delivered by the configured notification worker and SMTP provider.
 3. For an existing employee, invite from the employee profile first, then manage
-   their roles here. The user screen does not automatically link matching emails
-   to employee profiles or create another identity for that employee.
+   their roles here. Company Admin creation or role assignment automatically ensures
+   a linked employee, reusing an available matching employee when possible. Other
+   roles retain the existing employee-first invitation flow.
 4. **Change roles** replaces the account's role assignments. Permissions are the
    union of its assigned roles. Existing sessions are revoked after a change.
+   Company Admin profiles reserve an employee-plan place as well as a user place;
+   creation fails atomically if employee capacity is exhausted. Review the generated
+   code, provisional joining date, name and employment details in Employees.
 5. **Disable** blocks login and revokes sessions, invitations and reset tokens.
    It does not change employment status, delete history or release employee-plan
    capacity. **Enable** restores an activated account or returns an unactivated

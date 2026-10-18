@@ -1,0 +1,225 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">YOUR WORKSPACE AT A GLANCE</p>
+      <h1>Dashboard</h1>
+      <p>People, time and the work that needs your attention.</p>
+    </div>
+    <button mat-stroked-button (click)="load()" [disabled]="loading()">Refresh</button>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Loading dashboard" />
+  }
+  @if (data(); as dashboard) {
+    <div class="context">
+      <span
+        >{{ calendarDate(dashboard.today) | date: 'fullDate' : 'UTC' }} ·
+        {{ dashboard.timezone }}</span
+      ><span>Updated {{ dashboard.generated_at | date: 'shortTime' }}</span>
+    </div>
+    <nav class="quick-actions" aria-label="Quick actions">
+      @if (can('attendance.self', 'attendance.manage', 'attendance.approve.team')) {
+        <a mat-flat-button routerLink="/attendance">Open attendance</a>
+      }
+      @if (can('leave.self', 'leave.manage', 'leave.approve.team')) {
+        <a mat-stroked-button routerLink="/leave">Manage leave</a>
+      }
+      @if (can('reports.read.company', 'reports.read.team')) {
+        <a mat-stroked-button routerLink="/reports">View reports</a>
+      }
+      <a mat-button routerLink="/company/setup">Workspace shortcuts</a>
+    </nav>
+    @if (dashboard.workforce; as people) {
+      <section class="stats" aria-label="Workforce summary">
+        <article class="stat">
+          <span>Total employees</span><strong>{{ people.total }}</strong
+          ><small>{{ people.scope }} scope · non-archived profiles</small>
+        </article>
+        <article class="stat accent">
+          <span>Active employees</span><strong>{{ people.active }}</strong
+          ><small>Active and on notice · {{ people.scope }} scope</small>
+        </article>
+        @for (pending of dashboard.pending; track pending.kind) {
+          <a
+            class="stat action-stat"
+            [routerLink]="pending.kind === 'leave' ? '/leave/requests' : '/attendance'"
+            ><span>Pending {{ pending.kind }} approvals</span><strong>{{ pending.count }}</strong
+            ><small>{{ pending.scope }} scope · review requests →</small></a
+          >
+        }
+      </section>
+    } @else {
+      <section class="stats">
+        @for (pending of dashboard.pending; track pending.kind) {
+          <a
+            class="stat action-stat"
+            [routerLink]="pending.kind === 'leave' ? '/leave/requests' : '/attendance'"
+            ><span>Pending {{ pending.kind }} approvals</span><strong>{{ pending.count }}</strong
+            ><small>{{ pending.scope }} scope</small></a
+          >
+        }
+      </section>
+    }
+    @if (dashboard.attendance; as attendance) {
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Today's attendance</h2>
+            <p>{{ attendance.scope }} scope</p>
+          </div>
+          <a mat-button routerLink="/attendance">View attendance →</a>
+        </div>
+        @if (attendance.available && attendance.counts; as counts) {
+          <div class="attendance-stats">
+            @for (card of attendanceCards; track card.key) {
+              <div>
+                <strong>{{ counts[card.key] }}</strong
+                ><span>{{ card.label }}</span>
+              </div>
+            }
+          </div>
+          <p class="footnote">
+            Checked-in employees may still be working. Pending is not an absence. Half-day leave can
+            overlap with attendance.
+          </p>
+          @if (attendance.own; as own) {
+            <p class="footnote">
+              Your status: <b>{{ own.status.replaceAll('_', ' ') }}</b> · In:
+              {{ own.check_in ? (own.check_in | date: 'shortTime') : '—' }} · Out:
+              {{ own.check_out ? (own.check_out | date: 'shortTime') : '—' }}
+            </p>
+          }
+        } @else {
+          <p class="empty-state">{{ attendance.reason }}</p>
+        }
+      </section>
+    }
+    <div class="dashboard-grid">
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Upcoming holidays</h2>
+            <p>
+              Next 30 days ·
+              {{ dashboard.holiday_scope === 'all' ? 'all locations' : 'your calendar' }}
+            </p>
+          </div>
+          <a mat-button routerLink="/holidays">Calendar →</a>
+        </div>
+        @for (holiday of dashboard.holidays; track holiday.id) {
+          <div class="list-row">
+            <div>
+              <b>{{ holiday.name }}</b
+              ><small>{{ holiday.location_name ?? 'Company-wide' }}</small>
+            </div>
+            <span>{{ calendarDate(holiday.holiday_date) | date: 'dd MMM' : 'UTC' }}</span>
+          </div>
+        } @empty {
+          <p class="empty-state">No holidays in the next 30 days.</p>
+        }
+      </section>
+      @if (can('employees.manage')) {
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>People milestones</h2>
+              <p>Next 30 days · up to 20 events</p>
+            </div>
+          </div>
+          @for (event of dashboard.milestones; track $index) {
+            <div class="list-row">
+              <div>
+                <b>{{ event.name }}</b
+                ><small>{{ event.kind }}</small>
+              </div>
+              <span>{{ calendarDate(event.date) | date: 'dd MMM' : 'UTC' }}</span>
+            </div>
+          } @empty {
+            <p class="empty-state">No upcoming birthdays or work anniversaries.</p>
+          }
+        </section>
+      }
+      @if (dashboard.balances; as balances) {
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>My leave balances</h2>
+              <p>January–December {{ dashboard.today.slice(0, 4) }}</p>
+            </div>
+            <a mat-button routerLink="/leave">View leave →</a>
+          </div>
+          @for (balance of balances; track balance.id) {
+            <div class="list-row">
+              <div>
+                <b>{{ balance.type_name }}</b
+                ><small>{{ balance.pending }} pending · {{ balance.used }} used</small>
+              </div>
+              <span>{{
+                balance.balance_controlled
+                  ? balance.available + ' days left'
+                  : 'Not balance-controlled'
+              }}</span>
+            </div>
+          } @empty {
+            <p class="empty-state">No leave balances assigned yet.</p>
+          }
+        </section>
+      }
+      @if (dashboard.payslips; as payslips) {
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>My recent payslips</h2>
+              <p>Published statements</p>
+            </div>
+            <a mat-button routerLink="/payroll/payslips">All payslips →</a>
+          </div>
+          @for (slip of payslips; track slip.id) {
+            <a class="list-row" [routerLink]="['/payroll/payslips', slip.id]"
+              ><div>
+                <b>{{ calendarDate(slip.period_start) | date: 'MMMM yyyy' : 'UTC' }}</b
+                ><small>Net pay</small>
+              </div>
+              <span>{{ slip.currency }} {{ slip.net }}</span></a
+            >
+          } @empty {
+            <p class="empty-state">Your published payslips will appear here.</p>
+          }
+        </section>
+      }
+      @if (dashboard.payroll; as runs) {
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Payroll status</h2>
+              <p>Recent payroll runs</p>
+            </div>
+            <a mat-button routerLink="/payroll">Open payroll →</a>
+          </div>
+          @for (run of runs; track run.id) {
+            <a class="list-row" [routerLink]="['/payroll/runs', run.id]"
+              ><div>
+                <b>{{ calendarDate(run.period_start) | date: 'MMMM yyyy' : 'UTC' }}</b
+                ><small>{{
+                  run.published_at ? 'Payslips published' : 'Payslips not published'
+                }}</small>
+              </div>
+              <span class="status">{{ run.status }}</span></a
+            >
+          } @empty {
+            <p class="empty-state">No payroll runs created yet.</p>
+          }
+        </section>
+      }
+    </div>
+    @if (!dashboard.linked_employee && can('attendance.self', 'leave.self')) {
+      <p class="footnote">
+        Your account is not linked to an employee profile. Ask HR to link your profile to use
+        employee self-service.
+      </p>
+    }
+  }
+</main>

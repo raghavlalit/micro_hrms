@@ -1,0 +1,132 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #687c98;
+  font-weight: 700;
+}
+h1 {
+  font-size: 28px;
+  margin: 6px 0;
+}
+h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.page-heading p {
+  color: #637188;
+}
+.panel {
+  background: white;
+  border: 1px solid #e0e6ef;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+.filters-panel {
+  padding: 24px;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px 16px;
+  align-items: start;
+}
+.filters button {
+  margin-top: 8px;
+}
+.hint {
+  font-size: 12px;
+  color: #637188;
+  margin: 6px 0;
+}
+.result-heading {
+  padding: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.result-heading span {
+  font-size: 12px;
+  color: #637188;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 13px;
+}
+th,
+td {
+  padding: 15px 20px;
+  text-align: left;
+  border-bottom: 1px solid #edf0f5;
+}
+th {
+  background: #f7f9fc;
+  text-transform: capitalize;
+  font-size: 12px;
+  color: #52627a;
+}
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.empty-state {
+  padding: 32px;
+  color: #637188;
+}
+.message {
+  padding: 14px;
+  border-radius: 8px;
+  background: #edf5ff;
+}
+.error {
+  background: #fff0ef;
+  color: #9b2929;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.job-error {
+  white-space: normal;
+  max-width: 280px;
+  color: #9b2929;
+  margin-top: 6px;
+}
+@media (max-width: 1100px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .page-heading,
+  .result-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .filters {
+    grid-template-columns: 1fr;
+  }
+  .filters-panel {
+    padding: 16px;
+  }
+  .page-heading button {
+    width: 100%;
+  }
+}

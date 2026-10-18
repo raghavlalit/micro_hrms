@@ -19,6 +19,7 @@ Start `npm.cmd run dev:api` and `npm.cmd run dev:web` in separate terminals. Pos
 - [Setup, connection details and migration commands](docs/database-setup.md)
 - [Schema, relationships, security and pending business rules](docs/database-schema.md)
 - [Authentication, administrator provisioning and access rules](docs/authentication.md)
+- [Company password recovery and reset-email testing](docs/password-recovery.md)
 - [Module ownership and TypeORM conventions](docs/development-conventions.md)
 - [Company onboarding, activation and tenant settings](docs/company-onboarding.md)
 - [Frontend design, screen organization and UI conventions](docs/frontend-design.md)
@@ -28,6 +29,11 @@ Start `npm.cmd run dev:api` and `npm.cmd run dev:web` in separate terminals. Pos
 - [Attendance, corrections, approvals and calculation rules](docs/attendance-management.md)
 - [Leave balances, applications, approvals and annual setup](docs/leave-management.md)
 - [Payroll, salary revisions, calculations and private payslips](docs/payroll-management.md)
+- [Documents, sharing, version history and production storage](docs/document-management.md)
+- [Dashboard, scoped reports and CSV exports](docs/dashboard-reports.md)
+- [Background payslip generation and large report exports](docs/background-jobs.md)
+- [Notifications, SMTP, Redis/BullMQ worker and deployment](docs/notifications.md)
+- [Audit history, filters, permissions and privacy](docs/audit-history.md)
 - [Postman collection, environment and API testing instructions](postman/README.md)
 
 Run `npm.cmd run db:test` for real PostgreSQL migration/integrity/isolation tests, and `npm.cmd run db:smoke` for API startup verification. Tests use disposable resources and leave the development database intact.

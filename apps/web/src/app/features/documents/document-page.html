@@ -1,0 +1,115 @@
+<section class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">DOCUMENT LIBRARY</span>
+      <h1>{{ manage ? 'Employee documents' : 'Shared documents' }}</h1>
+      <p>
+        {{
+          manage
+            ? 'Manage private files, sharing and document history.'
+            : 'Documents shared with you through your employee or team permissions.'
+        }}
+      </p>
+    </div>
+    @if (manage) {
+      <div class="actions">
+        <a mat-stroked-button routerLink="/documents/categories">Categories</a
+        ><button mat-flat-button (click)="upload()">Upload document</button>
+      </div>
+    }
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  <section class="panel">
+    <form (ngSubmit)="load(true)" class="filters">
+      <mat-form-field appearance="outline"
+        ><mat-label>Search title or employee</mat-label
+        ><input matInput name="search" [(ngModel)]="search" /></mat-form-field
+      ><mat-form-field appearance="outline"
+        ><mat-label>Expiry</mat-label
+        ><mat-select name="expiry" [(ngModel)]="expiry"
+          ><mat-option value="all">All dates</mat-option
+          ><mat-option value="expired">Expired</mat-option
+          ><mat-option value="expiring">Expiring in 30 days</mat-option></mat-select
+        ></mat-form-field
+      >
+      @if (manage) {
+        <mat-form-field appearance="outline"
+          ><mat-label>Status</mat-label
+          ><mat-select name="status" [(ngModel)]="status"
+            ><mat-option value="active">Active</mat-option
+            ><mat-option value="archived">Archived</mat-option
+            ><mat-option value="all">All documents</mat-option></mat-select
+          ></mat-form-field
+        >
+      }
+      <button mat-stroked-button type="submit" [disabled]="loading()">Apply filters</button>
+    </form>
+    <p class="muted">Expiry dates use the company calendar. Files remain available after expiry.</p>
+  </section>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <section class="panel table-panel">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Employee</th>
+            <th>Visibility</th>
+            <th>Expiry</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>
+                <strong>{{ row.title }}</strong>
+                <div class="muted">
+                  {{ row.category_name }}
+                  @if (row.archived_at) {
+                    · Archived
+                  }
+                </div>
+              </td>
+              <td>
+                {{ row.employee_name }}
+                <div class="muted">{{ row.employee_code }}</div>
+              </td>
+              <td>
+                {{
+                  row.visibility === 'hr_only'
+                    ? 'HR only'
+                    : row.visibility === 'employee'
+                      ? 'HR and employee'
+                      : 'HR, employee and permitted manager'
+                }}
+              </td>
+              <td>
+                {{ row.expiry_date || 'No expiry' }}
+                @if (row.expiry_date && row.expiry_date < today) {
+                  <div class="expiry-warning">Expired</div>
+                }
+              </td>
+              <td><a mat-button [routerLink]="['/documents', row.id]">View</a></td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-state">No documents match this view.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button mat-button (click)="step(-1)" [disabled]="page === 1 || loading()">Previous</button
+      ><span>{{ total }} documents · Page {{ page }}</span
+      ><button mat-button (click)="step(1)" [disabled]="page * 20 >= total || loading()">
+        Next
+      </button>
+    </div>
+  </section>
+</section>

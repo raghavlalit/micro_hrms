@@ -1,0 +1,146 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">COMPANY ADMINISTRATION</p>
+      <h1>Audit history</h1>
+      <p class="muted">See who performed an action and when it happened.</p>
+    </div>
+    <button mat-stroked-button (click)="load()" [disabled]="loading()">Refresh</button>
+  </header>
+  <section class="panel">
+    <form class="filters" (ngSubmit)="apply()">
+      <mat-form-field appearance="outline"
+        ><mat-label>User name or email</mat-label>
+        <input
+          matInput
+          name="actor"
+          [(ngModel)]="filters.actor"
+          maxlength="100"
+          [disabled]="loading()"
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>Module</mat-label>
+        <mat-select
+          name="module"
+          [(ngModel)]="filters.module"
+          (selectionChange)="filters.action = ''"
+          [disabled]="loading()"
+        >
+          <mat-option value="">All modules</mat-option>
+          @for (module of options().modules; track module) {
+            <mat-option [value]="module">{{ label(module) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>Action</mat-label>
+        <mat-select name="action" [(ngModel)]="filters.action" [disabled]="loading()">
+          <mat-option value="">All actions</mat-option>
+          @for (action of actions(); track action) {
+            <mat-option [value]="action">{{ label(action) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>From date (UTC)</mat-label
+        ><input
+          matInput
+          name="from"
+          [matDatepicker]="datePicker1"
+          placeholder="YYYY-MM-DD"
+          [(ngModel)]="filters.from"
+          [disabled]="loading()" /><mat-datepicker-toggle
+          matIconSuffix
+          [for]="datePicker1" /><mat-datepicker #datePicker1
+      /></mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>To date (UTC)</mat-label
+        ><input
+          matInput
+          name="to"
+          [matDatepicker]="datePicker2"
+          placeholder="YYYY-MM-DD"
+          [(ngModel)]="filters.to"
+          [disabled]="loading()" /><mat-datepicker-toggle
+          matIconSuffix
+          [for]="datePicker2" /><mat-datepicker #datePicker2
+      /></mat-form-field>
+      <div class="filter-actions">
+        <button mat-flat-button type="submit" [disabled]="loading()">Apply filters</button
+        ><button mat-button type="button" (click)="reset()" [disabled]="loading()">Clear</button>
+      </div>
+    </form>
+    @if (optionsError()) {
+      <p class="message" role="status">
+        {{ optionsError() }}
+        <button mat-button (click)="loadOptions()">Retry filter choices</button>
+      </p>
+    }
+    @if (error()) {
+      <p class="message error" role="alert">{{ error() }}</p>
+    }
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading audit history" />
+    }
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Audit events">
+      <table>
+        <thead>
+          <tr>
+            <th>Date / time (UTC)</th>
+            <th>Performed by</th>
+            <th>Module</th>
+            <th>Action</th>
+            <th>Resource</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td class="date">{{ row.created_at | date: 'dd MMM yyyy, HH:mm:ss' : 'UTC' }}</td>
+              <td>
+                <strong>{{
+                  row.actor_name ?? (row.actor_id ? 'Unavailable user' : 'No tenant actor')
+                }}</strong
+                ><small>{{ row.actor_email }}</small>
+              </td>
+              <td>
+                <span class="module-tag">{{ label(row.module) }}</span>
+              </td>
+              <td>{{ label(row.action) }}</td>
+              <td>{{ label(row.entity_type) }}</td>
+              <td>
+                <button
+                  mat-button
+                  (click)="open(row)"
+                  [attr.aria-label]="'View details: ' + label(row.action)"
+                >
+                  View details
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!loading() && !rows().length && !error()) {
+      <div class="empty-state">
+        <h2>No matching activity</h2>
+        <p>Try clearing filters or choosing a different date range.</p>
+      </div>
+    }
+    <mat-paginator
+      [length]="total"
+      [pageIndex]="page - 1"
+      [pageSize]="20"
+      [disabled]="loading()"
+      (page)="page = $event.pageIndex + 1; load()"
+      aria-label="Audit history pages"
+    />
+  </section>
+  <p class="muted footnote">
+    Read-only company activity. Dates are shown in UTC. User names reflect the current account. Only
+    actions recorded by the application appear here.
+  </p>
+</main>

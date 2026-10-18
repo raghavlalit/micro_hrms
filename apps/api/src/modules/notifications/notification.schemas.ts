@@ -39,10 +39,27 @@ export const OutboxEvent = schema(
     available_at: { ...timestamp(), default: () => 'CURRENT_TIMESTAMP' },
     processed_at: timestamp(true),
     attempts: integer(),
+    delivery_status: state('pending'),
+    last_error_code: text(true),
+    encrypted_secret: text(true),
   },
   {
     uniques: [unique('tenant_id', 'idempotency_key')],
-    indices: [index('tenant_id', 'processed_at', 'available_at')],
+    checks: [
+      {
+        name: 'ck_notification_delivery_status',
+        expression: "delivery_status IN ('pending','sent','skipped','failed')",
+      },
+    ],
+    indices: [
+      index('tenant_id', 'processed_at', 'available_at'),
+      {
+        name: 'ix_notification_dispatch',
+        columns: ['available_at', 'id'],
+        where:
+          "event_type = 'notification.email' AND delivery_status = 'pending' AND processed_at IS NULL",
+      },
+    ],
   },
 );
 export const ExportJob = schema(

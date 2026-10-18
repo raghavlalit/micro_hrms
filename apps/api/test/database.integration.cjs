@@ -44,7 +44,7 @@ async function main() {
       logging: false,
     });
     await migration.initialize();
-    assert.equal((await migration.runMigrations()).length, 8);
+    assert.equal((await migration.runMigrations()).length, 13);
     pass('fresh migrations apply');
     assert.equal((await migration.runMigrations()).length, 0);
     pass('re-running migrations is a no-op');
@@ -52,14 +52,8 @@ async function main() {
     await migration.undoLastMigration();
     assert.equal((await migration.runMigrations()).length, 2);
     pass('security rollback and reapply retain reference data safely');
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
-    await migration.undoLastMigration();
+    for (let count = 0; count < migration.migrations.length; count++)
+      await migration.undoLastMigration();
     const remaining = await migration.query(
       "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'schema_migrations'",
     );
@@ -76,7 +70,7 @@ async function main() {
     const policies = await migration.query(
       "SELECT count(*)::int AS total FROM pg_class WHERE relnamespace='public'::regnamespace AND relrowsecurity AND relforcerowsecurity",
     );
-    assert.equal(policies[0].total, 37);
+    assert.equal(policies[0].total, 38);
     pass('RLS enabled and forced on every tenant-owned table');
 
     const [a, b] = await migration.query(

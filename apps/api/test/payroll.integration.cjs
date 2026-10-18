@@ -111,6 +111,12 @@ async function main() {
       );
       assert.equal(result.status, 201, JSON.stringify(result.body));
       assert.equal((await activate(result.body.invitation.token)).status, 200);
+      // This fixture's administrator joins after the tested payroll periods.
+      // Payroll salaries below intentionally cover only the named test employees.
+      await db.query(
+        "UPDATE employees SET joining_date='2099-01-01' WHERE tenant_id=$1 AND email='admin@example.test'",
+        [result.body.company.id],
+      );
       return { id: result.body.company.id, cookie: (await login(slug)).cookie };
     }
     const a = await company('attendance-a'),
@@ -560,12 +566,84 @@ async function main() {
       'concurrent locking is single-use, immutable amounts and attendance/leave locks are enforced',
     );
 
-    expectStatus(await transition(sept, 'publish'), 201);
-    expectStatus(await transition(sept, 'publish'), 201);
+    const queued = await transition(sept, 'publish');
+    expectStatus(queued, 202);
+    const repeated = await transition(sept, 'publish');
+    expectStatus(repeated, 202);
+    assert.equal(repeated.body.job.id, queued.body.job.id);
+    assert.equal(
+      (await request('/payslips/me', 'GET', undefined, staff.cookie)).body.items
+        .length,
+      0,
+    );
+    const {
+      BackgroundJobs,
+    } = require('../dist/modules/background-jobs/background-jobs.service');
+    const {
+      BackgroundProcessor,
+    } = require('../dist/modules/background-jobs/background-processor.service');
+    const {
+      PayslipGeneration,
+    } = require('../dist/modules/payroll/payslip-generation.service');
+    const {
+      ReportExports,
+    } = require('../dist/modules/reports/report-export.service');
+    const generation = app.get(PayslipGeneration);
+    const processor = new BackgroundProcessor(
+      app.get(BackgroundJobs),
+      generation,
+      app.get(ReportExports),
+    );
+    const save = generation.storage.save.bind(generation.storage);
+    let writes = 0;
+    generation.storage.save = async (...args) => {
+      if (++writes === 2) throw new Error('Synthetic storage interruption');
+      return save(...args);
+    };
+    await processor.process(a.id, queued.body.job.id);
+    assert.equal(
+      (await request('/payslips/me', 'GET', undefined, staff.cookie)).body.items
+        .length,
+      0,
+    );
+    assert.equal(
+      (await req(`/payroll/runs/${sept}/payslip-job`)).body.job.status,
+      'pending',
+    );
+    generation.storage.save = save;
+    await db.query(
+      'UPDATE background_jobs SET available_at=now() WHERE id=$1',
+      [queued.body.job.id],
+    );
+    await processor.process(a.id, queued.body.job.id);
+    await processor.process(a.id, queued.body.job.id);
+    assert.equal(
+      (await req(`/payroll/runs/${sept}/payslip-job`)).body.job.status,
+      'completed',
+    );
+    expectStatus(await transition(sept, 'publish'), 202);
+    pass(
+      'background payslip publication queues once, hides partial batches, recovers storage failure and completes once',
+    );
     const own = await request('/payslips/me', 'GET', undefined, staff.cookie);
     expectStatus(own, 200);
     assert.equal(own.body.items.length, 1);
     const slip = own.body.items[0];
+    const alerts = await request(
+      '/notifications',
+      'GET',
+      undefined,
+      staff.cookie,
+    );
+    expectStatus(alerts, 200);
+    assert.equal(
+      alerts.body.items.filter(
+        (row) =>
+          row.type === 'payslip.published' && row.resource_id === slip.id,
+      ).length,
+      1,
+    );
+    assert(!JSON.stringify(alerts.body.items).includes('21816.66'));
     assert.equal(slip.net, '21816.66');
     const view = await request(
       `/payslips/${slip.id}`,

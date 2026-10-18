@@ -42,7 +42,10 @@
         <h2>
           Company users <span class="count">{{ total }}</span>
         </h2>
-        <p class="muted">Login accounts and employee profiles are managed separately.</p>
+        <p class="muted">
+          Company Admin accounts include a linked employee profile. Manage access here and
+          employment details in Employees.
+        </p>
       </div>
     </div>
     <form class="access-filters" [formGroup]="filters" (ngSubmit)="apply()">

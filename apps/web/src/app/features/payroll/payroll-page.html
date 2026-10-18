@@ -40,10 +40,12 @@
         ><mat-label>Pay date</mat-label
         ><input
           matInput
-          type="date"
+          [matDatepicker]="datePicker1"
+          placeholder="YYYY-MM-DD"
           name="payDate"
           [(ngModel)]="payDate"
-          required /></mat-form-field
+          required /><mat-datepicker-toggle matIconSuffix [for]="datePicker1" /><mat-datepicker
+          #datePicker1 /></mat-form-field
       ><button mat-flat-button type="submit" [disabled]="busy() || !settingsReady()">
         Create run
       </button>

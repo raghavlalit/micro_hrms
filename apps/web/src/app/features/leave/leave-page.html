@@ -6,6 +6,9 @@
       <p>Plan time away and keep balances clear.</p>
     </div>
     <div class="actions">
+      @if (manages()) {
+        <a mat-stroked-button routerLink="/leave">Employee assignments</a>
+      }
       <a mat-stroked-button routerLink="/leave/requests">Requests & approvals</a
       ><a mat-stroked-button routerLink="/leave/calendar">Leave calendar</a>
     </div>
@@ -17,7 +20,7 @@
     <p class="message success" role="status">{{ success() }}</p>
   }
   <section class="panel filters">
-    @if (selfAllowed() && teamAllowed()) {
+    @if (!directEmployee && selfAllowed() && teamAllowed()) {
       <mat-form-field appearance="outline"
         ><mat-label>View</mat-label
         ><mat-select [(ngModel)]="mode" (selectionChange)="switchMode()" [disabled]="loading()"
@@ -26,7 +29,7 @@
         ></mat-form-field
       >
     }
-    @if (mode === 'team') {
+    @if (!directEmployee && mode === 'team') {
       <mat-form-field appearance="outline"
         ><mat-label>Find employee</mat-label
         ><input matInput [(ngModel)]="search" (keyup.enter)="searchPeople()" /></mat-form-field

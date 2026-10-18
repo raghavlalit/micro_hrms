@@ -4,6 +4,7 @@ import { In } from 'typeorm';
 import type { Principal } from '../auth/auth.service';
 import { InvitationsService } from '../auth/invitations.service';
 import { Employee } from '../employees/employee.schemas';
+import { AdminEmployeeService } from '../employees/admin-employee.service';
 import { Role, User, UserRole } from './user.schemas';
 import { AccessPolicyService } from './access-policy.service';
 import { EmployeeUserService } from './employee-user.service';
@@ -22,6 +23,7 @@ export class UserManagementService {
     private readonly policy: AccessPolicyService,
     private readonly invitations: InvitationsService,
     private readonly accounts: EmployeeUserService,
+    private readonly adminEmployees: AdminEmployeeService,
   ) {}
 
   list(actor: Principal, dto: UserListDto) {
@@ -107,7 +109,7 @@ export class UserManagementService {
 
   invite(actor: Principal, dto: InviteUserDto) {
     return this.policy.write(actor, async (manager, tenant, owned) => {
-      await this.policy.validateRoles(
+      const roles = await this.policy.validateRoles(
         manager,
         actor.tenantId!,
         dto.role_ids,
@@ -116,36 +118,38 @@ export class UserManagementService {
       const employee = await manager
         .getRepository(Employee)
         .findOneBy({ tenant_id: actor.tenantId, email: dto.email });
-      if (employee)
+      const isAdmin = roles.some((role) => role.code === 'company_admin');
+      if (employee && !isAdmin)
         throw new ConflictException(
           'This email belongs to an employee. Invite the account from their employee profile, then assign roles here.',
         );
-      const count = await manager
-        .getRepository(User)
-        .countBy({
-          tenant_id: actor.tenantId,
-          status: In(['active', 'invited']),
-        });
+      const count = await manager.getRepository(User).countBy({
+        tenant_id: actor.tenantId,
+        status: In(['active', 'invited']),
+      });
       if (count >= Number(tenant.user_limit))
         throw new ConflictException('Company user limit reached');
       const id = randomUUID();
-      await manager
-        .getRepository(User)
-        .insert({
-          id,
+      await manager.getRepository(User).insert({
+        id,
+        tenant_id: actor.tenantId,
+        display_name: dto.display_name,
+        email: dto.email,
+        status: 'invited',
+      });
+      await manager.getRepository(UserRole).insert(
+        dto.role_ids.map((role_id) => ({
           tenant_id: actor.tenantId,
-          display_name: dto.display_name,
-          email: dto.email,
-          status: 'invited',
-        });
-      await manager
-        .getRepository(UserRole)
-        .insert(
-          dto.role_ids.map((role_id) => ({
-            tenant_id: actor.tenantId,
-            user_id: id,
-            role_id,
-          })),
+          user_id: id,
+          role_id,
+        })),
+      );
+      if (isAdmin)
+        await this.adminEmployees.ensure(
+          manager,
+          actor.tenantId!,
+          id,
+          actor.id,
         );
       const invitation = await this.invitations.issue(
         manager,
@@ -178,18 +182,23 @@ export class UserManagementService {
       const before = await manager
         .getRepository(UserRole)
         .findBy({ tenant_id: actor.tenantId, user_id: id });
+      if (roles.some((role) => role.code === 'company_admin'))
+        await this.adminEmployees.ensure(
+          manager,
+          actor.tenantId!,
+          id,
+          actor.id,
+        );
       await manager
         .getRepository(UserRole)
         .delete({ tenant_id: actor.tenantId, user_id: id });
-      await manager
-        .getRepository(UserRole)
-        .insert(
-          dto.role_ids.map((role_id) => ({
-            tenant_id: actor.tenantId,
-            user_id: id,
-            role_id,
-          })),
-        );
+      await manager.getRepository(UserRole).insert(
+        dto.role_ids.map((role_id) => ({
+          tenant_id: actor.tenantId,
+          user_id: id,
+          role_id,
+        })),
+      );
       await this.policy.revoke(manager, actor.tenantId!, [id]);
       await this.policy.audit(
         manager,

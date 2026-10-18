@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { NotificationEvents } from '../notifications/notification-events.service';
 import { EntityManager } from 'typeorm';
 import type { Principal } from '../auth/auth.service';
 import { HolidayService } from '../holidays/holiday.service';
@@ -34,6 +35,7 @@ export class LeaveRequestService {
     readonly balances: LeaveBalanceService,
     readonly holidays: HolidayService,
     readonly attendance: LeaveAttendanceService,
+    readonly notifications: NotificationEvents,
   ) {}
   async calculate(
     manager: EntityManager,
@@ -260,6 +262,14 @@ export class LeaveRequestService {
         units,
         calculation,
       });
+      await this.notifications.workflow(
+        manager,
+        actor.tenantId!,
+        'leave',
+        id,
+        employee.id,
+        'submitted',
+      );
       return { id, status: 'pending', units };
     });
   }
@@ -335,6 +345,14 @@ export class LeaveRequestService {
         units: Number(request.units),
         comment: dto.comment ?? null,
       });
+      await this.notifications.workflow(
+        manager,
+        actor.tenantId!,
+        'leave',
+        id,
+        employee.id,
+        dto.decision,
+      );
       return { id, status: dto.decision };
     });
   }
@@ -379,6 +397,14 @@ export class LeaveRequestService {
         units: Number(request.units),
         reason: dto.reason,
       });
+      await this.notifications.workflow(
+        manager,
+        actor.tenantId!,
+        'leave',
+        id,
+        employee.id,
+        'cancelled',
+      );
       return { id, status: 'cancelled' };
     });
   }

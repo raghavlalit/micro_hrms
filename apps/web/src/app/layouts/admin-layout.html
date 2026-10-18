@@ -64,6 +64,9 @@
         <span>{{ session.user()?.kind === 'platform' ? 'Platform' : 'Workspace' }}</span
         ><span>/</span><strong>{{ title() }}</strong>
       </div>
+      @if (session.user()?.kind === 'tenant') {
+        <app-notification-bell />
+      }
       <button
         mat-button
         [matMenuTriggerFor]="accountMenu"

@@ -45,7 +45,7 @@ export class EmployeeAccountService {
     const employee = await manager
       .getRepository(Employee)
       .findOneBy({ tenant_id: tenantId, user_id: userId });
-    if (!employee) return; // Company administrators may have no employee profile.
+    if (!employee) return; // Non-admin accounts may still have no employee profile.
     if (
       employee.archived_at ||
       !['invited', 'active', 'on_notice'].includes(String(employee.status))

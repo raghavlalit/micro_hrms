@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { NotificationEvents } from '../notifications/notification-events.service';
 import { isDeepStrictEqual } from 'node:util';
 import type { Principal } from '../auth/auth.service';
 import { Employee } from '../employees/employee.schemas';
@@ -20,7 +21,10 @@ import {
 
 @Injectable()
 export class AttendanceRegularizationService {
-  constructor(private readonly attendance: AttendanceService) {}
+  constructor(
+    private readonly attendance: AttendanceService,
+    readonly notifications: NotificationEvents,
+  ) {}
   submit(actor: Principal, dto: RegularizationDto) {
     return this.attendance.write(actor, async (manager, timezone, now) => {
       const employee = await this.attendance.policy.self(manager, actor);
@@ -85,6 +89,14 @@ export class AttendanceRegularizationService {
           work_date: dto.work_date,
           reason: dto.reason,
         },
+      );
+      await this.notifications.workflow(
+        manager,
+        actor.tenantId!,
+        'attendance',
+        id,
+        employee.id,
+        'submitted',
       );
       return { id, status: 'pending' };
     });
@@ -248,6 +260,14 @@ export class AttendanceRegularizationService {
           work_date: request.work_date,
           comment: dto.comment ?? null,
         },
+      );
+      await this.notifications.workflow(
+        manager,
+        actor.tenantId!,
+        'attendance',
+        id,
+        employee.id,
+        dto.decision,
       );
       return { id, status: dto.decision };
     });

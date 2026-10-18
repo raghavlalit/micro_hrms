@@ -1,0 +1,218 @@
+<main class="page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">WORKSPACE INSIGHTS</p>
+      <h1>Reports</h1>
+      <p>Explore your workforce and download the data you need.</p>
+    </div>
+    <div class="actions">
+      <a mat-button routerLink="/reports/exports">My exports</a>
+      <button
+        mat-stroked-button
+        [disabled]="busy() || !options() || (payroll && !run)"
+        (click)="queue()"
+      >
+        Queue CSV export
+      </button>
+      <button mat-flat-button [disabled]="busy() || !result()?.total" (click)="download()">
+        Download CSV
+      </button>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message" role="status">{{ notice() }}</p>
+  }
+  @if (!kinds.length) {
+    <section class="panel empty-state">
+      Reports require a reporting permission and access to the corresponding module. Contact your
+      company administrator.
+    </section>
+  } @else {
+    <section class="panel filters-panel">
+      <form (ngSubmit)="load(true)" class="filters">
+        <mat-form-field appearance="outline"
+          ><mat-label>Report</mat-label
+          ><mat-select
+            name="kind"
+            [(ngModel)]="kind"
+            (selectionChange)="changeKind()"
+            [disabled]="busy()"
+          >
+            @for (item of kinds; track item) {
+              <mat-option [value]="item">{{ labels[item] }}</mat-option>
+            }
+          </mat-select></mat-form-field
+        >
+        <mat-form-field appearance="outline"
+          ><mat-label>Employee name or code</mat-label
+          ><input matInput name="search" [(ngModel)]="search" maxlength="100" [disabled]="busy()"
+        /></mat-form-field>
+        <mat-form-field appearance="outline"
+          ><mat-label>Department</mat-label
+          ><mat-select name="department" [(ngModel)]="department" [disabled]="busy()"
+            ><mat-option value="">All departments</mat-option>
+            @for (item of options()?.departments; track item.id) {
+              <mat-option [value]="item.id">{{ item.name }}</mat-option>
+            }
+          </mat-select></mat-form-field
+        >
+        <mat-form-field appearance="outline"
+          ><mat-label>Location</mat-label
+          ><mat-select name="location" [(ngModel)]="location" [disabled]="busy()"
+            ><mat-option value="">All locations</mat-option>
+            @for (item of options()?.locations; track item.id) {
+              <mat-option [value]="item.id">{{ item.name }}</mat-option>
+            }
+          </mat-select></mat-form-field
+        >
+        @if (dated) {
+          <mat-form-field appearance="outline"
+            ><mat-label>From</mat-label
+            ><input
+              matInput
+              [matDatepicker]="datePicker1"
+              placeholder="YYYY-MM-DD"
+              name="from"
+              [(ngModel)]="from"
+              required
+              [disabled]="busy()" /><mat-datepicker-toggle
+              matIconSuffix
+              [for]="datePicker1" /><mat-datepicker #datePicker1 /></mat-form-field
+          ><mat-form-field appearance="outline"
+            ><mat-label>To</mat-label
+            ><input
+              matInput
+              [matDatepicker]="datePicker2"
+              placeholder="YYYY-MM-DD"
+              name="to"
+              [(ngModel)]="to"
+              required
+              [disabled]="busy()" /><mat-datepicker-toggle
+              matIconSuffix
+              [for]="datePicker2" /><mat-datepicker #datePicker2
+          /></mat-form-field>
+        }
+        @if (kind === 'balances') {
+          <mat-form-field appearance="outline"
+            ><mat-label>Leave year</mat-label
+            ><input
+              matInput
+              type="number"
+              min="1900"
+              max="2200"
+              name="year"
+              [(ngModel)]="year"
+              required
+              [disabled]="busy()"
+          /></mat-form-field>
+        }
+        @if (statuses().length) {
+          <mat-form-field appearance="outline"
+            ><mat-label>Status</mat-label
+            ><mat-select name="status" [(ngModel)]="status" [disabled]="busy()"
+              ><mat-option value="">All statuses</mat-option>
+              @for (item of statuses(); track item) {
+                <mat-option [value]="item">{{ item.replaceAll('_', ' ') }}</mat-option>
+              }
+            </mat-select></mat-form-field
+          >
+        }
+        @if (payroll) {
+          <mat-form-field appearance="outline"
+            ><mat-label>Payroll run</mat-label
+            ><mat-select name="run" [(ngModel)]="run" required [disabled]="busy()">
+              @for (item of options()?.runs; track item.id) {
+                <mat-option [value]="item.id"
+                  >{{ item.period_start.slice(0, 7) }} · {{ item.status }} ·
+                  {{ item.currency }}</mat-option
+                >
+              }
+            </mat-select></mat-form-field
+          >
+        }
+        <button
+          mat-stroked-button
+          type="submit"
+          [disabled]="busy() || !options() || (payroll && !run)"
+        >
+          Apply filters
+        </button>
+      </form>
+      <p class="hint">
+        Scope: {{ options()?.scope ?? 'Loading' }}. CSV includes all matching rows, up to 5,000.
+        Apply filters before exporting.
+      </p>
+      @if (kind === 'attendance') {
+        <p class="hint">
+          Maximum 31 days. Pending means attendance has not yet been recorded; it is not an absence.
+          Times are UTC.
+        </p>
+      }
+      @if (kind === 'leave') {
+        <p class="hint">
+          Maximum 366 days. Overlapping requests show their full requested days, not just days
+          within the filter.
+        </p>
+      }
+      @if (payroll) {
+        <p class="hint">
+          Current calculation only. Unlocked runs can change. Department, location and search
+          filters use the current employee profile.
+        </p>
+      }
+    </section>
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Loading report" />
+    }
+    @if (result(); as data) {
+      <section class="panel results">
+        <div class="result-heading">
+          <h2>{{ labels[data.kind] }}</h2>
+          <span>{{ data.total }} rows · Updated {{ data.generated_at | date: 'short' }}</span>
+        </div>
+        @if (!data.rows.length) {
+          <p class="empty-state">No matching records. Try changing your filters.</p>
+        } @else {
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Report results">
+            <table>
+              <thead>
+                <tr>
+                  @for (column of data.columns; track column.key) {
+                    <th [class.numeric]="column.type === 'number'" scope="col">
+                      {{ column.label }}
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of data.rows; track $index) {
+                  <tr>
+                    @for (column of data.columns; track column.key) {
+                      <td [class.numeric]="column.type === 'number'">
+                        {{ row[column.key] ?? '—' }}
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <mat-paginator
+          [length]="data.total"
+          [pageIndex]="page - 1"
+          [pageSize]="limit"
+          [pageSizeOptions]="[20, 50, 100]"
+          [disabled]="busy()"
+          (page)="paginate($event)"
+          aria-label="Report pages"
+        />
+      </section>
+    } @else if (!busy() && payroll && !run) {
+      <p class="panel empty-state">No payroll runs are available yet.</p>
+    }
+  }
+</main>

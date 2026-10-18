@@ -3,7 +3,7 @@
     "_postman_id": "b907ed20-8287-4c02-95b6-36fb3c922da0",
     "name": "Micro HRMS — Completed APIs",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Maintained with each completed topic. Import the environment template and read postman/README.md. Session cookies, not bearer tokens. Select individual requests/folders intentionally: this is an API reference, not an all-at-once runner scenario. Writes modify the selected environment. Only implemented routes are included; leave/payroll/documents folders currently contain master settings only."
+    "description": "Maintained with each completed topic. Import the environment template and read postman/README.md. Session cookies, not bearer tokens. Select individual requests/folders intentionally: this is an API reference, not an all-at-once runner scenario. Writes modify the selected environment. Only implemented routes are included. Documents use multipart uploads; select a local file before sending."
   },
   "auth": {
     "type": "noauth"
@@ -339,6 +339,103 @@
           "response": []
         },
         {
+          "name": "Request company password reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Public company-account recovery, CSRF header required. Generic response whether the account exists or not. Requires active company/account and configured SMTP worker. 5 requests per company/email and 30 per IP per 15 minutes. The link is emailed only; never returned here. Use local Mailpit to obtain the test reset_token from the URL fragment after #. New requests replace earlier links. Platform recovery is not exposed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"{{company_slug}}\",\n  \"email\": \"{{tenant_email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reset company password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Public, CSRF protected. Paste only the token after # from the latest email into reset_token. Expires after 30 minutes and works once. Use 15–128 characters. Revokes all account sessions without signing in automatically. Update tenant_password locally and sign in again. Never commit/export populated recovery secrets.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"{{reset_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.unset('reset_token'); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
           "name": "Logout current session",
           "request": {
             "method": "POST",
@@ -435,7 +532,7 @@
           "response": []
         }
       ],
-      "description": "No public registration or forgot/reset password API is currently exposed. Do not add placeholders for unimplemented routes."
+      "description": "Company password recovery uses company code and email. Platform recovery and public registration are not exposed. Recovery links are delivered only by the configured SMTP worker."
     },
     {
       "name": "02 — Platform company onboarding",
@@ -549,7 +646,7 @@
                 "companies"
               ]
             },
-            "description": "Requires platform login. Creates real company defaults and an invited company administrator. Use a unique company_slug. Saves tenant_id and activation_token. Activate, then log in as the company user.",
+            "description": "Requires platform login. Creates company defaults, an invited company administrator and a linked employee profile in one transaction. Activation also activates that employee. Employee code is generated; joining date defaults to account creation date and employment type to Not specified for HR review. Use a unique company_slug. Saves tenant_id and activation_token. Activate, then log in as the company user.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"{{company_name}}\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"currency\": \"INR\",\n  \"date_format\": \"dd/MM/yyyy\",\n  \"contact_email\": \"{{tenant_email}}\",\n  \"contact_phone\": \"\",\n  \"address\": {\n    \"city\": \"Pune\",\n    \"country\": \"India\"\n  },\n  \"slug\": \"{{company_slug}}\",\n  \"admin_name\": \"Postman Company Admin\",\n  \"admin_email\": \"{{tenant_email}}\"\n}",
@@ -1520,7 +1617,7 @@
                 "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 12,\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
+                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 18,\n  \"applicability\": {\n    \"department_id\": null,\n    \"location_id\": null\n  },\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1570,7 +1667,7 @@
                 "description": "Use a company account with the required permission. Cookie authentication is handled by Postman.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 12,\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
+                  "raw": "{\n  \"leave_type_id\": \"{{leave_type_id}}\",\n  \"name\": \"Postman Policy\",\n  \"annual_entitlement\": 18,\n  \"applicability\": {\n    \"department_id\": null,\n    \"location_id\": null\n  },\n  \"is_paid\": true,\n  \"balance_controlled\": true,\n  \"carry_forward_enabled\": false,\n  \"exclude_non_working_days\": true,\n  \"effective_from\": \"2026-01-01\",\n  \"effective_to\": null\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1873,7 +1970,7 @@
           "description": "Tenant permission: documents.manage. The create request saves document_category_id. Updates use that ID; list requests never select an existing record for modification automatically."
         }
       ],
-      "description": "Only implemented master CRUD. Leave requests, payroll runs and document uploads are not implemented yet. Holiday calendar requests are in folder 08."
+      "description": "Master CRUD. Operational holiday, attendance, leave, payroll and document requests are in folders 08-12."
     },
     {
       "name": "06 — Employees",
@@ -2633,7 +2730,7 @@
           "response": []
         },
         {
-          "name": "Invite standalone user",
+          "name": "Invite company user",
           "request": {
             "method": "POST",
             "header": [
@@ -2655,7 +2752,7 @@
                 "users"
               ]
             },
-            "description": "Run role catalog first. Saves target user_id and activation_token. For an existing employee use their profile invitation endpoint instead.",
+            "description": "Run role catalog first. Saves target user_id and activation_token. Include company_admin_role_id to automatically create a linked employee (or reuse an available unlinked employee with the same email). For other roles, invite existing employees from their profile. Admin creation consumes an employee place; capacity failure rolls back the account and invitation. Review generated employee details in Employees.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"display_name\": \"Postman User\",\n  \"email\": \"{{invited_user_email}}\",\n  \"role_ids\": [\n    \"{{employee_role_id}}\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
@@ -2705,7 +2802,7 @@
                 "roles"
               ]
             },
-            "description": "Replaces the complete role list. Add more same-company role IDs for multiple roles. Revokes existing sessions; self-change and last-admin removal are blocked.",
+            "description": "Replaces the complete role list. Add more same-company role IDs for multiple roles. Assigning company_admin ensures one linked employee profile and checks employee capacity. Existing profiles and employment details are preserved. Revokes existing sessions; self-change and last-admin removal are blocked.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"role_ids\": [\n    \"{{manager_role_id}}\"\n  ],\n  \"reason\": \"Reviewed access for Postman testing\"\n}",
@@ -3406,7 +3503,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/attendance/people?page=1&limit=20",
+              "raw": "{{base_url}}/attendance/people?page=1&limit=20&active_only=true",
               "host": [
                 "{{base_url}}"
               ],
@@ -3427,10 +3524,14 @@
                   "key": "search",
                   "value": "",
                   "disabled": true
+                },
+                {
+                  "key": "active_only",
+                  "value": "true"
                 }
               ]
             },
-            "description": "attendance.manage sees company employees; attendance.approve.team sees direct reports only. Use a returned id as employee_id. Supports search/page/limit."
+            "description": "attendance.manage sees company employees; attendance.approve.team sees direct reports only. Use a returned id as employee_id. Supports search/page/limit. active_only=true restricts to active/on_notice employees; omit or use false to include other non-archived statuses. Returns department_name and location_name."
           },
           "event": [
             {
@@ -4042,6 +4143,401 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Employee leave assignment directory",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments?year={{leave_year}}&page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{leave_year}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "department_id",
+                  "value": "{{department_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "location_id",
+                  "value": "{{location_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "policy_id",
+                  "value": "{{leave_policy_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "unassigned",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "leave.manage. Server pagination; summary ignores the status filter. Active/on-notice employees with employment overlap. Status is assigned, partial, unassigned or not_applicable; completeness counts distinct applicable active leave types. Policy department/location scope and effective dates apply."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Leave assignment department options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/departments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "departments"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Leave assignment location options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/locations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "locations"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Unassigned applicable employee policies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/employees/{{employee_id}}/policies?year={{leave_year}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "employees",
+                "{{employee_id}}",
+                "policies"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{leave_year}}"
+                }
+              ]
+            },
+            "description": "leave.manage. Only active, applicable policies without an existing balance for this employee, leave type and year."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Preview bulk leave assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "preview"
+              ]
+            },
+            "description": "Creates a 30-minute draft only; does not credit leave. Maximum 10000 employees. For all matching pages set all_matching=true, remove employee_ids and supply directory filters. Both years must match. Existing balances are skipped; eligibility is rechecked at execution. Reuse an operation UUID only for identical input. One policy per batch; no bulk carry-forward.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation_id\": \"{{leave_assignment_operation_id}}\",\n  \"policy_id\": \"{{leave_policy_id}}\",\n  \"year\": 2026,\n  \"credited\": 18,\n  \"carry_forward\": 0,\n  \"reason\": \"Reviewed annual entitlement\",\n  \"all_matching\": false,\n  \"employee_ids\": [\n    \"{{employee_id}}\"\n  ],\n  \"filters\": {\n    \"year\": 2026\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('leave_assignment_job_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Confirm bulk leave assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/jobs/{{leave_assignment_job_id}}/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "jobs",
+                "{{leave_assignment_job_id}}",
+                "confirm"
+              ]
+            },
+            "description": "202 Accepted; owner with leave.manage only. Confirms frozen employee IDs. Requires jobs:worker. Repeated confirmation does not recredit. Changed policies require a new preview."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 202', function () { pm.response.to.have.status(202); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Recent leave assignment jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "jobs"
+              ]
+            },
+            "description": "Latest 20 jobs belonging to the current requester."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Leave assignment preview or progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/jobs/{{leave_assignment_job_id}}?page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "jobs",
+                "{{leave_assignment_job_id}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Owner only. Counts and 50 outcome rows per page. Poll until completed/failed; preview rows do not credit balances."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Retry failed leave assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leave/assignments/jobs/{{leave_assignment_job_id}}/retry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leave",
+                "assignments",
+                "jobs",
+                "{{leave_assignment_job_id}}",
+                "retry"
+              ]
+            },
+            "description": "202 Accepted. Owner only; preserves already committed outcomes and balances. If the policy changed, create a new preview instead."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 202', function () { pm.response.to.have.status(202); });"
                 ]
               }
             }
@@ -5349,7 +5845,7 @@
           "response": []
         },
         {
-          "name": "Publish private payslip PDFs",
+          "name": "Queue private payslip PDFs",
           "request": {
             "method": "POST",
             "header": [
@@ -5374,7 +5870,7 @@
                 "publish"
               ]
             },
-            "description": "Locked runs only. Generates files in private PAYSLIP_STORAGE_DIR. Requires persistent storage; non-ASCII names require PAYSLIP_FONT_PATH. Repeat publication is idempotent. Does not pay employees or send email.",
+            "description": "202 Accepted. Locked runs only. The separate jobs:worker generates PDFs in private PAYSLIP_STORAGE_DIR and atomically publishes the whole batch. Poll payslip-job for status. Repeating a failed request retries generation; successful repeats are idempotent. Shared persistent storage required; non-ASCII names require PAYSLIP_FONT_PATH. Sends configured payslip notifications after publication; does not pay employees.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"revision\": \"{{payroll_revision_id}}\",\n  \"calculation_version\": \"{{payroll_calculation_version}}\",\n  \"reason\": \"Reviewed payroll amounts\"\n}",
@@ -5391,7 +5887,44 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                  "pm.test('Expected HTTP 202', function () { pm.response.to.have.status(202); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Payslip generation status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payroll/runs/{{payroll_run_id}}/payslip-job",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payroll",
+                "runs",
+                "{{payroll_run_id}}",
+                "payslip-job"
+              ]
+            },
+            "description": "payroll.manage required. Returns job or null. Poll pending/running until completed or failed. PDFs become visible only after the entire batch is published."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -5521,6 +6054,1377 @@
         }
       ],
       "description": "Monthly payroll workflow. Refresh run details between mutations to update revision/version variables. Monetary request values must be strings. Earlier calculations are retained; locking has no undo endpoint."
+    },
+    {
+      "name": "12 — Document management",
+      "item": [
+        {
+          "name": "Document library",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents?page=1&limit=20&status=active&expiry=all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "expiry",
+                  "value": "all"
+                },
+                {
+                  "key": "employee_id",
+                  "value": "{{employee_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{document_category_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "HR: all company records. Employee: own shared records. documents.read.team: explicitly team-visible direct-report documents only. expiry=expired or expiring (next 30 days in company time)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Find employees for upload",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/people?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "people"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "documents.manage required. Select employee_id from the intended employee; no automatic selection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload employee document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            },
+            "description": "HR only. Body > form-data: choose one local file in file field. PDF/PNG/JPEG, nonempty, max 10 MiB. Do not set Content-Type manually; Postman supplies the boundary. New operation UUID per new document; retain UUID and identical fields/file for retries. Visibility defaults to this example: hr_only.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Employment contract",
+                  "type": "text"
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{document_category_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "visibility",
+                  "value": "hr_only",
+                  "type": "text"
+                },
+                {
+                  "key": "issue_date",
+                  "value": "{{document_issue_date}}",
+                  "type": "text"
+                },
+                {
+                  "key": "expiry_date",
+                  "value": "{{document_expiry_date}}",
+                  "type": "text"
+                },
+                {
+                  "key": "reason",
+                  "value": "Reviewed employee document",
+                  "type": "text"
+                },
+                {
+                  "key": "employee_id",
+                  "value": "{{employee_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "operation_id",
+                  "value": "{{document_upload_operation_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('document_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Document details and versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}"
+              ]
+            },
+            "description": "Captures revision for mutations. Select document_version_id explicitly from versions; earlier versions are retained. Private storage keys are never returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.set('document_revision_id',data.revision); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Edit document metadata",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}"
+              ]
+            },
+            "description": "HR only. Refresh detail first. Full metadata replacement; empty dates clear them. Changes apply to sharing of all versions.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Employment contract\",\n  \"category_id\": \"{{document_category_id}}\",\n  \"visibility\": \"hr_only\",\n  \"issue_date\": \"{{document_issue_date}}\",\n  \"expiry_date\": \"{{document_expiry_date}}\",\n  \"reason\": \"Reviewed document change\",\n  \"revision\": \"{{document_revision_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload new document version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/versions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}",
+                "versions"
+              ]
+            },
+            "description": "HR only. Choose file in form-data. New operation UUID per replacement; reuse for retry. Refresh detail revision before uploading. Prior files are retained.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "revision",
+                  "value": "{{document_revision_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "reason",
+                  "value": "Reviewed document change",
+                  "type": "text"
+                },
+                {
+                  "key": "operation_id",
+                  "value": "{{document_version_operation_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('document_version_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Download document version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/versions/{{document_version_id}}/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}",
+                "versions",
+                "{{document_version_id}}",
+                "download"
+              ]
+            },
+            "description": "Authenticated binary attachment, no-store. Use Send and Download. HR can access retained archived files; employees/managers cannot. Every successful download is audited."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Archive document version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/versions/{{document_version_id}}/archive",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}",
+                "versions",
+                "{{document_version_id}}",
+                "archive"
+              ]
+            },
+            "description": "HR only. Refresh detail revision first. Hides this version from employee/team; newest remaining active version becomes current. Cannot archive the last active version of an active document.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{document_revision_id}}\",\n  \"reason\": \"Reviewed document change\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Archive document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_id}}/archive",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}",
+                "archive"
+              ]
+            },
+            "description": "HR only. Hides the entire document from employee/team. Files remain retained for HR and continue counting toward storage quota. No hard deletion or restore endpoint.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": \"{{document_revision_id}}\",\n  \"reason\": \"Reviewed document change\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Private document library with audited uploads, immutable file versions, expiry metadata and scoped sharing. Select individual requests intentionally."
+    },
+    {
+      "name": "13 Dashboard and reports",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dashboard"
+              ]
+            },
+            "description": "Tenant dashboard. Each widget uses its domain company/team/self scope. Payroll status requires payroll.manage; payslips and balances are personal. No report permission is needed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Report options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/options?kind={{report_kind}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "options"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "{{report_kind}}"
+                }
+              ]
+            },
+            "description": "Choose employees, attendance, leave, balances, payroll or components. Requires a reporting permission AND the matching domain permission. Returns scoped organization filters and payroll runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Preview report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_kind}}?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "{{report_kind}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "{{report_from}}",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "{{report_to}}",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "{{leave_year}}",
+                  "disabled": true
+                },
+                {
+                  "key": "run_id",
+                  "value": "{{payroll_run_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "employee_id",
+                  "value": "{{employee_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "department_id",
+                  "value": "{{department_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "location_id",
+                  "value": "{{location_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Default attendance uses month-to-date. Attendance: from/to <=31 days; leave requests: <=366 days. Balances: year. Payroll/components: enable run_id. Date/year/run filters are exclusive to their corresponding report. Max 5000 matching rows; 413 requires narrower filters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Export report CSV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_kind}}/export",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "{{report_kind}}",
+                "export"
+              ]
+            },
+            "description": "Use Send and Download. Default body is for attendance or leave. For employees use {}; balances use {\"year\":2026}; payroll/components use {\"run_id\":\"<payroll UUID>\"}. Optional search/employee_id/department_id/location_id and supported status. Exports all matching rows, ignores pagination, capped at 5000. UTF-8 BOM, quoted and formula-safe. Export is audited and CSRF protected.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"{{report_from}}\",\n  \"to\": \"{{report_to}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Queue large CSV export",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_kind}}/export-jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "{{report_kind}}",
+                "export-jobs"
+              ]
+            },
+            "description": "202 Accepted. Requires jobs:worker. Default filters suit attendance/leave; employees: operation_id only; balances: add year; payroll/components: add run_id. Maximum 100000 rows/50 MiB. Reuse operation_id only to safely repeat the SAME request; use a new UUID for a fresh snapshot or changed filters. Limits: 3 active jobs per requester, 31 attendance days/366 leave days.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation_id\": \"{{report_export_operation_id}}\",\n  \"from\": \"{{report_from}}\",\n  \"to\": \"{{report_to}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 202', function () { pm.response.to.have.status(202); });",
+                  "if (pm.response.code === 202) { const data = pm.response.json(); pm.environment.set('report_export_job_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "My background exports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report-exports?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "report-exports"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Background export status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report-exports/{{report_export_job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "report-exports",
+                "{{report_export_job_id}}"
+              ]
+            },
+            "description": "Owner only. Poll pending/running until completed/failed. Status includes progress and safe error codes; never file paths or report data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Download completed background CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report-exports/{{report_export_job_id}}/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "report-exports",
+                "{{report_export_job_id}}",
+                "download"
+              ]
+            },
+            "description": "Use Send and Download. Owner only and current report/domain/team access is checked again. Completed files expire after 24 hours (410); pending/failed returns 409. CSV is UTF-8 BOM, quoted and formula-safe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Retry failed background export",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/report-exports/{{report_export_job_id}}/retry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "report-exports",
+                "{{report_export_job_id}}",
+                "retry"
+              ]
+            },
+            "description": "202 Accepted. Owner with current permission only; failed jobs only. Resets the three-attempt budget and queues the same filters. Expired/completed jobs require a new operation UUID.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 202', function () { pm.response.to.have.status(202); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Operational reporting with tenant and domain scopes. Small synchronous CSV and large background CSV exports. XLSX/PDF reports remain outside this release."
+    },
+    {
+      "name": "14 Notifications and email delivery",
+      "item": [
+        {
+          "name": "My notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications?page=1&limit=20&status=all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "all"
+                }
+              ]
+            },
+            "description": "Own notifications only. status=all|read|unread. Includes total and unread count plus an authorized-screen link; no invitation tokens or delivery payloads. Set notification_id manually from your own list."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Unread notification count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/unread-count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Use a company account with the required permission. Cookie authentication is handled by Postman."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mark notification read or unread",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/{{notification_id}}/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notification_id}}",
+                "read"
+              ]
+            },
+            "description": "Own notification only. Change read to false to mark it unread. Other users/tenants receive 404.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mark all my notifications read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "Marks your currently unread notifications read. Does not change another user’s inbox.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Company email delivery status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/deliveries?page=1&limit=20&status=failed",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "failed"
+                }
+              ]
+            },
+            "description": "company.manage required. status=pending|sent|failed|skipped, or disable status for all. Only delivery metadata is returned. Set notification_delivery_id explicitly from this list. Sent means SMTP accepted, not inbox delivery/read confirmation."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Retry failed workflow email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/deliveries/{{notification_delivery_id}}/retry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "deliveries",
+                "{{notification_delivery_id}}",
+                "retry"
+              ]
+            },
+            "description": "company.manage required; failed non-invitation delivery only. Requeues the existing record and audits the action. Worker rechecks current recipient access. For failed invitations, use the existing replacement-invitation API to issue a fresh activation link. SMTP must be configured and the separate worker running.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "In-app workflow notifications and durable PostgreSQL outbox → Redis/BullMQ → SMTP delivery. SMTP is captured by local Mailpit in development; no general-purpose send-email API is exposed."
+    },
+    {
+      "name": "15 Audit logs and activity history",
+      "item": [
+        {
+          "name": "Company audit history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "actor",
+                  "value": "Admin",
+                  "disabled": true
+                },
+                {
+                  "key": "module",
+                  "value": "employee",
+                  "disabled": true
+                },
+                {
+                  "key": "action",
+                  "value": "employee.updated",
+                  "disabled": true
+                },
+                {
+                  "key": "actor_id",
+                  "value": "{{user_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "entity_id",
+                  "value": "{{employee_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "{{audit_from}}",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "{{audit_to}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "company.manage required. Read-only, newest first; inclusive UTC dates. Actor searches current user name/email, case-insensitively as literal text. No raw metadata. Set audit_event_id from a chosen row. Tenant identity comes only from the session."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Audit filter choices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs/options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs",
+                "options"
+              ]
+            },
+            "description": "Tenant-scoped action codes and module prefixes recorded in this company. company.manage required."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Audit event details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs/{{audit_event_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs",
+                "{{audit_event_id}}"
+              ]
+            },
+            "description": "company.manage required. Own-tenant event only; unknown/cross-tenant IDs return 404. Selected safe operational details only; private reasons, payroll values, snapshots and credentials are excluded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Expected HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Read-only company activity, including existing historical events. No edit/delete/export endpoint. System/platform entries may have no tenant actor. Current user identity is shown, not a historical name snapshot."
     }
   ]
 }

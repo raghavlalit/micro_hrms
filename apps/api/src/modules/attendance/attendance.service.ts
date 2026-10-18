@@ -12,12 +12,16 @@ import { Tenant } from '../tenants/tenant.schemas';
 import { AuditLog } from '../audit/audit.schemas';
 import { HolidayService } from '../holidays/holiday.service';
 import { companyToday } from '../holidays/holiday-calendar';
+import { Department, Location } from '../organization/organization.schemas';
 import { Attendance } from './attendance.schemas';
 import { LeaveAttendanceService } from '../leave/leave-attendance.service';
 import { AttendancePolicy } from './attendance-policy.service';
 import { AttendanceRepository } from './attendance-repository';
 import type { AttendanceEmployee, AttendanceRules } from './attendance.types';
-import { AttendanceAdjustmentDto, AttendancePeopleDto } from './attendance.dto';
+import {
+  AttendanceAdjustmentDto,
+  AttendanceDirectoryDto,
+} from './attendance.dto';
 import {
   attendanceBaseline,
   calculateAttendance,
@@ -81,20 +85,38 @@ export class AttendanceService {
       metadata,
     });
   }
-  people(actor: Principal, dto: AttendancePeopleDto) {
+  people(actor: Principal, dto: AttendanceDirectoryDto) {
     if (!this.policy.reviews(actor))
       throw new ForbiddenException(
         'Team or company attendance access required',
       );
     return this.tenants.withTenant(actor.tenantId!, async (manager) => {
-      const query = this.policy.employeeQuery(manager, actor.tenantId!);
+      const query = this.policy
+        .employeeQuery(manager, actor.tenantId!)
+        .leftJoin(
+          Department.options.name,
+          'department',
+          'department.id = employee.department_id AND department.tenant_id = employee.tenant_id',
+        )
+        .leftJoin(
+          Location.options.name,
+          'location',
+          'location.id = employee.location_id AND location.tenant_id = employee.tenant_id',
+        )
+        .addSelect('department.name', 'department_name')
+        .addSelect('location.name', 'location_name');
+      // Employees serving notice remain active members of the workforce.
+      if (dto.active_only === 'true')
+        query.andWhere('employee.status IN (:...activeStatuses)', {
+          activeStatuses: ['active', 'on_notice'],
+        });
       if (!this.policy.manages(actor))
         query.andWhere('employee.manager_id = :managerId', {
           managerId: (await this.policy.self(manager, actor)).id,
         });
       if (dto.search)
         query.andWhere(
-          '(employee.first_name ILIKE :search OR employee.last_name ILIKE :search OR employee.employee_code ILIKE :search)',
+          "(concat_ws(' ', employee.first_name, employee.last_name) ILIKE :search OR employee.employee_code ILIKE :search)",
           { search: `%${dto.search.replace(/[\\%_]/g, '\\$&')}%` },
         );
       const total = await query.getCount();
@@ -103,13 +125,20 @@ export class AttendanceService {
         .addOrderBy('employee.id', 'ASC')
         .offset((dto.page - 1) * dto.limit)
         .limit(dto.limit)
-        .getRawMany<AttendanceEmployee>();
+        .getRawMany<
+          AttendanceEmployee & {
+            department_name: string | null;
+            location_name: string | null;
+          }
+        >();
       return {
         items: rows.map((row) => ({
           id: row.id,
           employee_code: row.employee_code,
           name: `${row.first_name} ${row.last_name}`,
           status: row.status,
+          department_name: row.department_name,
+          location_name: row.location_name,
         })),
         total,
       };

@@ -1,17 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_FORM_IMPORTS } from '../../shared/ui/material';
 import { SessionService } from '../../core/auth/session.service';
 import { AttendanceApi, attendanceError } from './attendance-api.service';
-import {
-  AttendanceCalendar,
-  AttendanceDay,
-  AttendancePerson,
-  displayTime,
-} from './attendance.models';
+import { AttendanceCalendar, AttendanceDay, displayTime } from './attendance.models';
 import { AttendanceEditData, AttendanceEditDialog } from './attendance-edit-dialog';
 @Component({
   imports: [FormsModule, DatePipe, RouterLink, ...MATERIAL_FORM_IMPORTS],
@@ -23,22 +18,20 @@ export class AttendancePage {
   private readonly dialog = inject(MatDialog);
   readonly session = inject(SessionService);
   readonly data = signal<AttendanceCalendar | null>(null);
-  readonly people = signal<AttendancePerson[]>([]);
+  private readonly route = inject(ActivatedRoute);
+  readonly backQuery = this.route.snapshot.queryParams;
   readonly loading = signal(false);
   readonly error = signal('');
   readonly success = signal('');
-  readonly peopleBusy = signal(false);
   readonly time = displayTime;
-  month = '';
-  employeeId = '';
-  search = '';
-  peoplePage = 1;
-  peopleTotal = 0;
-  mode = this.session.user()?.permissions.includes('attendance.manage')
-    ? 'team'
-    : this.selfAllowed()
-      ? 'self'
-      : 'team';
+  month = this.route.snapshot.queryParamMap.get('month') ?? '';
+  employeeId = this.route.snapshot.paramMap.get('id') ?? '';
+  mode = this.employeeId ? 'team' : 'self';
+  // Calendar dates have no timezone. Anchor them to UTC before the UTC date pipe
+  // formats them, rather than letting Angular interpret browser-local midnight.
+  calendarDate(date: string) {
+    return `${date}T00:00:00Z`;
+  }
   selfAllowed() {
     return !!this.session.user()?.permissions.includes('attendance.self');
   }
@@ -48,41 +41,6 @@ export class AttendancePage {
       ?.permissions.some((p) => ['attendance.manage', 'attendance.approve.team'].includes(p));
   }
   constructor() {
-    if (this.mode === 'self') this.load();
-    if (this.teamAllowed()) this.loadPeople();
-  }
-  loadPeople() {
-    if (this.peopleBusy()) return;
-    this.peopleBusy.set(true);
-    this.api.people(this.search, this.peoplePage).subscribe({
-      next: (result) => {
-        this.people.set(result.items);
-        this.peopleTotal = result.total;
-        this.peopleBusy.set(false);
-        if (this.mode === 'team' && !result.items.some((person) => person.id === this.employeeId)) {
-          this.employeeId = result.items[0]?.id ?? '';
-          this.data.set(null);
-          if (this.employeeId) this.load();
-        }
-      },
-      error: (error) => {
-        this.error.set(attendanceError(error));
-        this.peopleBusy.set(false);
-      },
-    });
-  }
-  searchPeople() {
-    this.peoplePage = 1;
-    this.loadPeople();
-  }
-  peopleStep(step: number) {
-    this.peoplePage += step;
-    this.loadPeople();
-  }
-  switchMode() {
-    this.data.set(null);
-    this.error.set('');
-    if (this.mode === 'team' && !this.employeeId) this.employeeId = this.people()[0]?.id ?? '';
     this.load();
   }
   load() {

@@ -1,0 +1,137 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.panel {
+  overflow: hidden;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
+  padding: 24px;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 20px;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th,
+td {
+  text-align: left;
+  padding: 18px 20px;
+  border-top: 1px solid var(--border);
+}
+th {
+  background: #f7faf9;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+td {
+  min-width: 120px;
+}
+td strong {
+  font-weight: 500;
+}
+td:nth-child(2) {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+td button,
+.date {
+  white-space: nowrap;
+}
+small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 5px;
+}
+.module-tag {
+  border-radius: 5px;
+  background: #eef5f3;
+  color: #23685d;
+  padding: 5px 9px;
+}
+.message {
+  margin: 0 24px 20px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f7f5ed;
+}
+.error {
+  color: #9b2929;
+  background: #fff0ef;
+}
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.empty-state h2 {
+  font-size: 18px;
+  color: var(--ink);
+}
+.footnote {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.detail-action {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 18px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 155px minmax(0, 1fr);
+  gap: 16px;
+  font-size: 13px;
+}
+dt {
+  color: var(--muted);
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.identifier {
+  font-family: monospace;
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .page-heading {
+    align-items: flex-start;
+    gap: 16px;
+    flex-direction: column;
+  }
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+    gap: 0;
+  }
+  .filter-actions {
+    padding-bottom: 0;
+  }
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  dd {
+    margin-bottom: 12px;
+  }
+}

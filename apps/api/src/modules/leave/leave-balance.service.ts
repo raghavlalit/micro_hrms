@@ -17,6 +17,7 @@ import {
 import { LeaveAccess } from './leave-access.service';
 import { LeaveAdjustmentDto, LeaveEntitlementDto } from './leave.dto';
 import { roundDays } from './leave-calculation';
+import { Employee } from '../employees/employee.schemas';
 
 @Injectable()
 export class LeaveBalanceService {
@@ -32,18 +33,16 @@ export class LeaveBalanceService {
     requestId?: string,
   ) {
     if (!units) return;
-    await manager
-      .getRepository(LeaveBalanceEntry)
-      .insert({
-        tenant_id: actor.tenantId,
-        balance_id: balanceId,
-        request_id: requestId ?? null,
-        actor_id: actor.id,
-        kind,
-        units,
-        reason,
-        idempotency_key: key,
-      });
+    await manager.getRepository(LeaveBalanceEntry).insert({
+      tenant_id: actor.tenantId,
+      balance_id: balanceId,
+      request_id: requestId ?? null,
+      actor_id: actor.id,
+      kind,
+      units,
+      reason,
+      idempotency_key: key,
+    });
   }
   available(balance: Record<string, unknown>) {
     return roundDays(
@@ -54,156 +53,163 @@ export class LeaveBalanceService {
     );
   }
   setup(actor: Principal, employeeId: string, dto: LeaveEntitlementDto) {
-    return this.access.write(actor, async (manager) => {
-      const employee = await this.access.employee(manager, actor, employeeId);
-      const policy = await manager
-        .getRepository(LeavePolicy)
-        .findOneBy({ tenant_id: actor.tenantId, id: dto.policy_id });
-      if (!policy || policy.archived_at)
-        throw new NotFoundException('Active policy not found');
-      const type = await manager
-        .getRepository(LeaveType)
-        .findOneBy({
-          tenant_id: actor.tenantId,
-          id: String(policy.leave_type_id),
-          is_active: true,
-        });
-      if (!type) throw new BadRequestException('Leave type is inactive');
-      const from = `${dto.year}-01-01`,
-        to = `${dto.year}-12-31`;
-      const effectiveFrom = [
-        from,
-        String(policy.effective_from),
-        employee.joining_date,
-      ]
-        .sort()
-        .at(-1)!;
-      const effectiveTo = [
-        to,
-        ...(policy.effective_to ? [policy.effective_to as string] : []),
-        ...(employee.termination_date ? [employee.termination_date] : []),
-      ].sort()[0];
-      if (effectiveFrom > effectiveTo)
+    return this.access.write(actor, (manager) =>
+      this.setupInTransaction(manager, actor, employeeId, dto),
+    );
+  }
+  // Caller holds the tenant lock. Bulk jobs commit the credit and its outcome together.
+  async setupInTransaction(
+    manager: EntityManager,
+    actor: Principal,
+    employeeId: string,
+    dto: LeaveEntitlementDto,
+  ) {
+    const employee = await this.access.employee(manager, actor, employeeId);
+    const policy = await manager
+      .getRepository(LeavePolicy)
+      .findOneBy({ tenant_id: actor.tenantId, id: dto.policy_id });
+    if (!policy || policy.archived_at)
+      throw new NotFoundException('Active policy not found');
+    const profile = await manager
+      .getRepository(Employee)
+      .findOneByOrFail({ tenant_id: actor.tenantId, id: employeeId });
+    const scope = (policy.applicability ?? {}) as Record<string, string | null>;
+    if (
+      !['active', 'on_notice'].includes(String(profile.status)) ||
+      (scope.department_id && scope.department_id !== profile.department_id) ||
+      (scope.location_id && scope.location_id !== profile.location_id)
+    )
+      throw new BadRequestException(
+        'This policy does not apply to this employee',
+      );
+    const type = await manager.getRepository(LeaveType).findOneBy({
+      tenant_id: actor.tenantId,
+      id: String(policy.leave_type_id),
+      is_active: true,
+    });
+    if (!type) throw new BadRequestException('Leave type is inactive');
+    const from = `${dto.year}-01-01`,
+      to = `${dto.year}-12-31`;
+    const effectiveFrom = [
+      from,
+      String(policy.effective_from),
+      employee.joining_date,
+    ]
+      .sort()
+      .at(-1)!;
+    const effectiveTo = [
+      to,
+      ...(policy.effective_to ? [policy.effective_to as string] : []),
+      ...(employee.termination_date ? [employee.termination_date] : []),
+    ].sort()[0];
+    if (effectiveFrom > effectiveTo)
+      throw new BadRequestException(
+        'Policy and employment dates do not cover this year',
+      );
+    const existing = await manager.getRepository(LeaveBalance).findOneBy({
+      tenant_id: actor.tenantId,
+      employee_id: employeeId,
+      leave_type_id: String(policy.leave_type_id),
+      period_start: from,
+    });
+    if (existing)
+      throw new ConflictException(
+        'This leave type already has an entitlement for this employee/year',
+      );
+    const credited = dto.credited ?? Number(policy.annual_entitlement);
+    if (
+      !policy.balance_controlled &&
+      (credited !== 0 || dto.carry_forward !== 0)
+    )
+      throw new BadRequestException(
+        'Uncontrolled leave uses zero credit and no carry-forward',
+      );
+    const id = randomUUID();
+    await manager.getRepository(LeaveBalance).insert({
+      id,
+      tenant_id: actor.tenantId,
+      employee_id: employeeId,
+      leave_type_id: policy.leave_type_id,
+      period_start: from,
+      period_end: to,
+      credited,
+      used: 0,
+      pending: 0,
+      adjusted: dto.carry_forward,
+    });
+    await manager.getRepository(EmployeeLeavePolicy).insert({
+      tenant_id: actor.tenantId,
+      employee_id: employeeId,
+      policy_id: dto.policy_id,
+      effective_from: effectiveFrom,
+      effective_to: effectiveTo,
+    });
+    await this.entry(
+      manager,
+      actor,
+      id,
+      'credit',
+      credited,
+      dto.reason,
+      `entitlement:${id}`,
+    );
+    if (dto.carry_forward) {
+      if (!policy.carry_forward_enabled)
         throw new BadRequestException(
-          'Policy and employment dates do not cover this year',
+          'Carry-forward is disabled for this policy',
         );
-      const existing = await manager
-        .getRepository(LeaveBalance)
-        .findOneBy({
-          tenant_id: actor.tenantId,
-          employee_id: employeeId,
-          leave_type_id: String(policy.leave_type_id),
-          period_start: from,
-        });
-      if (existing)
-        throw new ConflictException(
-          'This leave type already has an entitlement for this employee/year',
-        );
-      const credited = dto.credited ?? Number(policy.annual_entitlement);
+      const previous = await manager.getRepository(LeaveBalance).findOneBy({
+        tenant_id: actor.tenantId,
+        employee_id: employeeId,
+        leave_type_id: String(policy.leave_type_id),
+        period_start: `${dto.year - 1}-01-01`,
+      });
       if (
-        !policy.balance_controlled &&
-        (credited !== 0 || dto.carry_forward !== 0)
+        !previous ||
+        Number(previous.pending) !== 0 ||
+        this.available(previous) < dto.carry_forward
       )
-        throw new BadRequestException(
-          'Uncontrolled leave uses zero credit and no carry-forward',
+        throw new ConflictException(
+          'Previous year must have sufficient available balance and no pending requests',
         );
-      const id = randomUUID();
-      await manager
-        .getRepository(LeaveBalance)
-        .insert({
-          id,
-          tenant_id: actor.tenantId,
-          employee_id: employeeId,
-          leave_type_id: policy.leave_type_id,
-          period_start: from,
-          period_end: to,
-          credited,
-          used: 0,
-          pending: 0,
-          adjusted: dto.carry_forward,
-        });
-      await manager
-        .getRepository(EmployeeLeavePolicy)
-        .insert({
-          tenant_id: actor.tenantId,
-          employee_id: employeeId,
-          policy_id: dto.policy_id,
-          effective_from: effectiveFrom,
-          effective_to: effectiveTo,
-        });
+      await manager.getRepository(LeaveBalance).update(
+        { id: String(previous.id), tenant_id: actor.tenantId },
+        {
+          adjusted: roundDays(Number(previous.adjusted) - dto.carry_forward),
+        },
+      );
+      await this.entry(
+        manager,
+        actor,
+        String(previous.id),
+        'adjust',
+        -dto.carry_forward,
+        dto.reason,
+        `carry-out:${id}`,
+      );
       await this.entry(
         manager,
         actor,
         id,
-        'credit',
-        credited,
+        'adjust',
+        dto.carry_forward,
         dto.reason,
-        `entitlement:${id}`,
+        `carry-in:${id}`,
       );
-      if (dto.carry_forward) {
-        if (!policy.carry_forward_enabled)
-          throw new BadRequestException(
-            'Carry-forward is disabled for this policy',
-          );
-        const previous = await manager
-          .getRepository(LeaveBalance)
-          .findOneBy({
-            tenant_id: actor.tenantId,
-            employee_id: employeeId,
-            leave_type_id: String(policy.leave_type_id),
-            period_start: `${dto.year - 1}-01-01`,
-          });
-        if (
-          !previous ||
-          Number(previous.pending) !== 0 ||
-          this.available(previous) < dto.carry_forward
-        )
-          throw new ConflictException(
-            'Previous year must have sufficient available balance and no pending requests',
-          );
-        await manager
-          .getRepository(LeaveBalance)
-          .update(
-            { id: String(previous.id), tenant_id: actor.tenantId },
-            {
-              adjusted: roundDays(
-                Number(previous.adjusted) - dto.carry_forward,
-              ),
-            },
-          );
-        await this.entry(
-          manager,
-          actor,
-          String(previous.id),
-          'adjust',
-          -dto.carry_forward,
-          dto.reason,
-          `carry-out:${id}`,
-        );
-        await this.entry(
-          manager,
-          actor,
-          id,
-          'adjust',
-          dto.carry_forward,
-          dto.reason,
-          `carry-in:${id}`,
-        );
-      }
-      await this.access.audit(manager, actor, id, 'entitlement_created', {
-        employee_id: employeeId,
-        policy_id: dto.policy_id,
-        year: dto.year,
-        credited,
-        carry_forward: dto.carry_forward,
-        reason: dto.reason,
-      });
-      return {
-        id,
-        credited,
-        available: roundDays(credited + dto.carry_forward),
-      };
+    }
+    await this.access.audit(manager, actor, id, 'entitlement_created', {
+      employee_id: employeeId,
+      policy_id: dto.policy_id,
+      year: dto.year,
+      credited,
+      carry_forward: dto.carry_forward,
+      reason: dto.reason,
     });
+    return {
+      id,
+      credited,
+      available: roundDays(credited + dto.carry_forward),
+    };
   }
   adjust(actor: Principal, id: string, dto: LeaveAdjustmentDto) {
     return this.access.write(actor, async (manager) => {

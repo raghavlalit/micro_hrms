@@ -1,0 +1,50 @@
+.assignment-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.assignment-summary .panel {
+  margin: 0;
+  padding: 20px;
+}
+.assignment-summary span {
+  color: #536c78;
+  font-size: 13px;
+}
+.assignment-summary strong {
+  display: block;
+  font-size: 30px;
+  margin-top: 8px;
+}
+.assignment-status {
+  display: inline-block;
+  background: #f5f0de;
+  color: #655318;
+  border-radius: 16px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+.assignment-status.complete {
+  background: #e2f2ec;
+  color: #16624e;
+}
+.selection {
+  margin-bottom: 16px;
+}
+.data-table {
+  min-width: 760px;
+}
+@media (max-width: 1050px) {
+  .assignment-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .assignment-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .assignment-summary .panel {
+    padding: 14px;
+  }
+}

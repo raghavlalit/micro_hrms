@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EmployeeAccountModule } from '../employees/employee-account.module';
 import { CompanyAdminService } from './company-admin.service';
 import { EmployeeUserService } from './employee-user.service';
 import { TenantContextModule } from '../tenants/tenant-context.module';
@@ -11,7 +12,7 @@ import {
   RoleManagementController,
 } from './user-management.controller';
 @Module({
-  imports: [TenantContextModule, InvitationsModule],
+  imports: [TenantContextModule, InvitationsModule, EmployeeAccountModule],
   controllers: [UserManagementController, RoleManagementController],
   providers: [
     CompanyAdminService,

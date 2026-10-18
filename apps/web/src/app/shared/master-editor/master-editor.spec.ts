@@ -60,3 +60,57 @@ describe('Master-data editor', () => {
     http.verify();
   });
 });
+
+describe('Numeric master fields', () => {
+  const policy: MasterConfig = {
+    title: 'Leave policies', endpoint: 'leave/policies', description: 'Test',
+    fields: [{ key: 'annual_entitlement', label: 'Annual entitlement (days)', type: 'number', required: true, min: 0, max: 366, step: '0.01' }],
+    defaults: { annual_entitlement: 0 },
+  };
+  beforeEach(() => TestBed.configureTestingModule({
+    imports: [MasterEditor],
+    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+      { provide: ActivatedRoute, useValue: { snapshot: { data: { master: policy } } } }],
+  }));
+  it('submits typed entitlement as a JSON number and validates empty/out-of-range input', async () => {
+    const fixture = TestBed.createComponent(MasterEditor), page = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/v1/leave/policies').flush([]);
+    page.add();
+    await fixture.whenStable();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type=number]');
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
+    async function enter(value: string) {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await fixture.whenStable();
+    }
+    for (const value of ['', '-1', '367']) {
+      await enter(value);
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      http.expectNone(request => request.method === 'POST');
+    }
+    await enter('18');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const saved = http.expectOne('/api/v1/leave/policies');
+    expect(saved.request.body.annual_entitlement).toBe(18);
+    saved.flush({});
+    http.expectOne('/api/v1/leave/policies').flush([]);
+    http.verify();
+  });
+  it('converts returned decimals on edit, preserving fractions and zero', () => {
+    const fixture = TestBed.createComponent(MasterEditor), page = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/v1/leave/policies').flush([]);
+    for (const [stored, expected] of [['18.50', 18.5], ['0.00', 0]] as const) {
+      page.edit({ id: 'policy', annual_entitlement: stored });
+      page.save();
+      const saved = http.expectOne('/api/v1/leave/policies/policy');
+      expect(saved.request.method).toBe('PUT');
+      expect(saved.request.body.annual_entitlement).toBe(expected);
+      saved.flush({});
+      http.expectOne('/api/v1/leave/policies').flush([]);
+    }
+    http.verify();
+  });
+});
